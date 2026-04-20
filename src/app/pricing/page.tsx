@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -18,7 +18,7 @@ const features = [
   "Photo proof records",
 ];
 
-export default function PricingPage() {
+function PricingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
@@ -147,7 +147,7 @@ export default function PricingPage() {
           <ul className="mt-8 space-y-3">
             {features.map((feature) => (
               <li key={feature} className="flex items-center gap-3 text-sm text-emerald-50">
-                <span className="text-emerald-300">✓</span>
+                <span className="text-emerald-300">âœ“</span>
                 <span>{feature}</span>
               </li>
             ))}
@@ -171,5 +171,13 @@ export default function PricingPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900" />}>
+      <PricingContent />
+    </Suspense>
   );
 }
