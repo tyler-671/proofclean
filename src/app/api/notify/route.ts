@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
-      from: "ProofClean <onboarding@resend.dev>",
+      from: "ProofClean <notifications@proofclean.ca>",
       to: client_email,
       subject: "Your office has been cleaned ✓",
       text: `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ProofClean.`,
