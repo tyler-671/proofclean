@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "cad",
             recurring: {
               interval: "month",
             },
