@@ -103,6 +103,7 @@ export default function DashboardPage() {
       .from("jobs")
       .select("id, location_name, cleaner_name, status, job_date")
       .eq("user_id", user.id)
+      .order("job_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -271,7 +272,18 @@ export default function DashboardPage() {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
-              <span className="text-sm font-bold tracking-tight text-emerald-100">PC</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5 text-emerald-300"
+            >
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
             </div>
             <div className="leading-tight">
               <p className="text-base font-semibold tracking-tight text-emerald-50">ProofClean</p>
