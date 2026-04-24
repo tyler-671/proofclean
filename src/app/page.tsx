@@ -190,7 +190,7 @@ export default function LandingPage() {
 <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
-            Up and running in under 10 minutes.
+            Be up and running in under 10 minutes.
           </h2>
         </div>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -269,7 +269,7 @@ export default function LandingPage() {
       <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
-            Common questions.
+            Frequently asked questions.
           </h2>
         </div>
         <div className="mt-10 space-y-4">
@@ -314,6 +314,23 @@ export default function LandingPage() {
               <p className="mt-3 text-sm text-emerald-100/85">{item.a}</p>
             </details>
           ))}
+        </div>
+      </section>
+      {/* Final CTA */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+        <div className="rounded-3xl border border-emerald-200/15 bg-white/5 p-8 text-center ring-1 ring-white/10 backdrop-blur sm:p-12">
+          <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
+            Ready to stop running your cleaning business on group chats?
+          </h2>
+          <p className="mx-auto mt-6 max-w-xl text-lg text-emerald-100/90">
+            Create your ProofClean account in minutes and start dispatching tonight.
+          </p>
+          <Link
+            href="/signup"
+            className="mt-8 inline-block rounded-xl bg-emerald-300/20 px-6 py-3 text-sm font-semibold text-emerald-50 ring-1 ring-emerald-300/35 transition hover:bg-emerald-300/30"
+          >
+            Start your ProofClean account
+          </Link>
         </div>
       </section>
       {/* Footer */}
