@@ -165,15 +165,17 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-emerald-800 hover:text-emerald-700"
-            >
-              Sign in
-            </Link>
-          </p>
+          <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+            <p className="text-sm text-emerald-900">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-700"
+              >
+                Sign in here
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
