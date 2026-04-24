@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -12,43 +13,17 @@ const supabase =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
-export default function Home() {
+export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"error" | "success" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const emailInputRef = useRef<HTMLInputElement>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
-
-  const syncAutofilledValues = () => {
-    const emailValue = emailInputRef.current?.value ?? "";
-    const passwordValue = passwordInputRef.current?.value ?? "";
-
-    if (emailValue !== email) {
-      setEmail(emailValue);
-    }
-
-    if (passwordValue !== password) {
-      setPassword(passwordValue);
-    }
-  };
-
-  useEffect(() => {
-    syncAutofilledValues();
-
-    const timeoutId = window.setTimeout(syncAutofilledValues, 100);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    syncAutofilledValues();
-
-    const formData = new FormData(event.currentTarget);
-    const submittedEmail = String(formData.get("email") ?? email).trim();
-    const submittedPassword = String(formData.get("password") ?? password);
 
     if (!supabase) {
       setStatusType("error");
@@ -56,13 +31,25 @@ export default function Home() {
       return;
     }
 
+    if (password.length < 8) {
+      setStatusType("error");
+      setStatusMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setStatusType("error");
+      setStatusMessage("Passwords do not match.");
+      return;
+    }
+
     setIsSubmitting(true);
     setStatusType(null);
     setStatusMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: submittedEmail,
-      password: submittedPassword,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
     });
 
     if (error) {
@@ -72,33 +59,17 @@ export default function Home() {
       return;
     }
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      setStatusType("error");
-      setStatusMessage(userError?.message ?? "Could not verify logged-in user.");
+    if (data.session) {
       setIsSubmitting(false);
-      return;
-    }
-
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (subscriptionError) {
-      setStatusType("error");
-      setStatusMessage(subscriptionError.message);
-      setIsSubmitting(false);
+      router.replace("/pricing");
       return;
     }
 
     setIsSubmitting(false);
-    router.replace(subscription?.status === "active" ? "/dashboard" : "/pricing");
+    setStatusType("success");
+    setStatusMessage(
+      "Account created! Check your inbox to confirm your email, then sign in.",
+    );
   };
 
   return (
@@ -110,7 +81,7 @@ export default function Home() {
               ProofClean
             </p>
             <p className="mt-2 text-sm font-medium text-emerald-800/85">
-              Commercial Janitorial Platform
+              Create your account
             </p>
           </header>
 
@@ -123,7 +94,6 @@ export default function Home() {
                 Email
               </label>
               <input
-                ref={emailInputRef}
                 id="email"
                 name="email"
                 type="email"
@@ -131,7 +101,6 @@ export default function Home() {
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                onInput={syncAutofilledValues}
                 className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
                 placeholder="you@company.com"
               />
@@ -144,17 +113,36 @@ export default function Home() {
                 Password
               </label>
               <input
-                ref={passwordInputRef}
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                onInput={syncAutofilledValues}
                 className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="Enter your password"
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="mb-1.5 block text-sm font-medium text-gray-700"
+              >
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
+                placeholder="Re-enter your password"
               />
             </div>
             {statusMessage ? (
@@ -173,18 +161,18 @@ export default function Home() {
               disabled={isSubmitting}
               className="w-full rounded-lg bg-emerald-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-950 focus:ring-offset-2"
             >
-              {isSubmitting ? "Signing in..." : "Sign In"}
+              {isSubmitting ? "Creating account..." : "Create account"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-600">
-            New to ProofClean?{" "}
-            
-              href="/signup"
+            Already have an account?{" "}
+            <Link
+              href="/"
               className="font-semibold text-emerald-800 hover:text-emerald-700"
             >
-              Create an account
-            </a>
+              Sign in
+            </Link>
           </p>
         </div>
       </div>
