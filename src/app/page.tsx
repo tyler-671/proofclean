@@ -320,7 +320,7 @@ export default function LandingPage() {
       <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
         <div className="rounded-3xl border border-emerald-200/15 bg-white/5 p-8 text-center ring-1 ring-white/10 backdrop-blur sm:p-12">
           <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
-            Ready to stop running your cleaning business on group chats?
+          Organize your crew. Reassure your clients. Start today.
           </h2>
           <p className="mx-auto mt-6 max-w-xl text-lg text-emerald-100/90">
             Create your ProofClean account in minutes and start dispatching tonight.
