@@ -147,7 +147,7 @@ function PricingContent() {
           <ul className="mt-8 space-y-3">
             {features.map((feature) => (
               <li key={feature} className="flex items-center gap-3 text-sm text-emerald-50">
-                <span className="text-emerald-300">âœ“</span>
+                <span className="text-emerald-300">✓</span>
                 <span>{feature}</span>
               </li>
             ))}
