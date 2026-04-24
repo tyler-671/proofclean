@@ -115,7 +115,7 @@ export default function LoginPage() {
           </span>
         </Link>
       </nav>
-      <div className="flex items-center justify-center py-12"></div>
+      <div className="flex items-center justify-center py-12">
       <div className="w-full max-w-[420px]">
         <div className="rounded-2xl bg-white p-8 shadow-2xl shadow-black/25 ring-1 ring-black/5 sm:p-10">
           <header className="mb-8 text-center">
