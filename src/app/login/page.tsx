@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -103,7 +104,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 px-4 py-12 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 px-4 py-6 font-[family-name:var(--font-geist-sans)] sm:px-6">
+      <nav className="mx-auto w-full max-w-6xl">
+        <Link href="/" className="inline-flex items-center gap-3 transition hover:opacity-80">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
+            <span className="text-sm font-bold tracking-tight text-emerald-100">PC</span>
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-emerald-50">
+            ProofClean
+          </span>
+        </Link>
+      </nav>
+      <div className="flex items-center justify-center py-12"></div>
       <div className="w-full max-w-[420px]">
         <div className="rounded-2xl bg-white p-8 shadow-2xl shadow-black/25 ring-1 ring-black/5 sm:p-10">
           <header className="mb-8 text-center">
@@ -186,6 +198,7 @@ export default function LoginPage() {
               Create an account
             </Link>
           </p>
+        </div>
         </div>
       </div>
     </div>
