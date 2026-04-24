@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -12,182 +13,173 @@ const supabase =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
-export default function Home() {
+const valueProps = [
+  {
+    title: "Everything in one place",
+    body: "See every job, every cleaner, every location on one dashboard. Finally ditch the spreadsheets.",
+  },
+  {
+    title: "Dispatch in seconds",
+    body: "Assign jobs and locations to cleaners in one click. Everyone knows what they're doing tonight.",
+  },
+  {
+    title: "Automated photo proof",
+    body: "When a job's marked complete, your client gets an instant email confirmation with a photo.",
+  },
+];
+
+export default function LandingPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
-  const [statusType, setStatusType] = useState<"error" | "success" | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const emailInputRef = useRef<HTMLInputElement>(null);
-  const passwordInputRef = useRef<HTMLInputElement>(null);
-
-  const syncAutofilledValues = () => {
-    const emailValue = emailInputRef.current?.value ?? "";
-    const passwordValue = passwordInputRef.current?.value ?? "";
-
-    if (emailValue !== email) {
-      setEmail(emailValue);
-    }
-
-    if (passwordValue !== password) {
-      setPassword(passwordValue);
-    }
-  };
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    syncAutofilledValues();
+    let isMounted = true;
 
-    const timeoutId = window.setTimeout(syncAutofilledValues, 100);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
+    const checkAuth = async () => {
+      if (!supabase) {
+        if (isMounted) setIsCheckingAuth(false);
+        return;
+      }
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    syncAutofilledValues();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const formData = new FormData(event.currentTarget);
-    const submittedEmail = String(formData.get("email") ?? email).trim();
-    const submittedPassword = String(formData.get("password") ?? password);
+      if (!isMounted) return;
 
-    if (!supabase) {
-      setStatusType("error");
-      setStatusMessage("Supabase environment variables are missing.");
-      return;
-    }
+      if (session?.user) {
+        const { data: subscription } = await supabase
+          .from("subscriptions")
+          .select("status")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-    setIsSubmitting(true);
-    setStatusType(null);
-    setStatusMessage("");
+        router.replace(
+          subscription?.status === "active" ? "/dashboard" : "/pricing",
+        );
+        return;
+      }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: submittedEmail,
-      password: submittedPassword,
-    });
+      setIsCheckingAuth(false);
+    };
 
-    if (error) {
-      setStatusType("error");
-      setStatusMessage(error.message);
-      setIsSubmitting(false);
-      return;
-    }
+    void checkAuth();
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
 
-    if (userError || !user) {
-      setStatusType("error");
-      setStatusMessage(userError?.message ?? "Could not verify logged-in user.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (subscriptionError) {
-      setStatusType("error");
-      setStatusMessage(subscriptionError.message);
-      setIsSubmitting(false);
-      return;
-    }
-
-    setIsSubmitting(false);
-    router.replace(subscription?.status === "active" ? "/dashboard" : "/pricing");
-  };
+  if (isCheckingAuth) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900" />
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 px-4 py-12 font-[family-name:var(--font-geist-sans)]">
-      <div className="w-full max-w-[420px]">
-        <div className="rounded-2xl bg-white p-8 shadow-2xl shadow-black/25 ring-1 ring-black/5 sm:p-10">
-          <header className="mb-8 text-center">
-            <p className="text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">
-              ProofClean
-            </p>
-            <p className="mt-2 text-sm font-medium text-emerald-800/85">
-              Commercial Janitorial Platform
-            </p>
-          </header>
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                ref={emailInputRef}
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                onInput={syncAutofilledValues}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="you@company.com"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <input
-                ref={passwordInputRef}
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                onInput={syncAutofilledValues}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="Enter your password"
-              />
-            </div>
-            {statusMessage ? (
-              <p
-                className={`rounded-lg border px-4 py-3 text-sm font-medium ${
-                  statusType === "error"
-                    ? "border-red-200 bg-red-50 text-red-700"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                }`}
-              >
-                {statusMessage}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-lg bg-emerald-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-950 focus:ring-offset-2"
-            >
-              {isSubmitting ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-gray-600">
-            New to ProofClean?{" "}
-            
-            <a  href="/signup"
-              className="font-semibold text-emerald-800 hover:text-emerald-700"
-            >
-              Create an account
-            </a>
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 font-[family-name:var(--font-geist-sans)] text-white">
+      {/* Top nav */}
+      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-6 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
+            <span className="text-sm font-bold tracking-tight text-emerald-100">PC</span>
+          </div>
+          <span className="text-lg font-semibold tracking-tight text-emerald-50">
+            ProofClean
+          </span>
         </div>
-      </div>
-    </div>
+        <div className="flex items-center gap-3 text-sm font-medium">
+          <Link
+            href="/login"
+            className="rounded-lg px-4 py-2 text-emerald-100 transition hover:text-white"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            className="rounded-lg bg-emerald-300/20 px-4 py-2 text-emerald-50 ring-1 ring-emerald-300/35 transition hover:bg-emerald-300/30"
+          >
+            Get started
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pt-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-emerald-50 sm:text-5xl lg:text-6xl">
+            Dispatch your team.
+            <br />
+            Update clients automatically.
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-emerald-100/90 sm:text-xl">
+            Dispatch jobs, organize your crew, and send clients automated photo
+            proof — all in one simple dashboard.
+          </p>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/signup"
+              className="w-full rounded-xl bg-emerald-300/20 px-6 py-3 text-sm font-semibold text-emerald-50 ring-1 ring-emerald-300/35 transition hover:bg-emerald-300/30 sm:w-auto"
+            >
+              Start your ProofClean account
+            </Link>
+            <Link
+              href="/login"
+              className="w-full rounded-xl px-6 py-3 text-sm font-semibold text-emerald-100 transition hover:text-white sm:w-auto"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Value props */}
+      <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {valueProps.map((prop) => (
+            <div
+              key={prop.title}
+              className="rounded-3xl border border-emerald-200/15 bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur sm:p-8"
+            >
+              <h3 className="text-lg font-semibold tracking-tight text-emerald-50">
+                {prop.title}
+              </h3>
+              <p className="mt-3 text-sm text-emerald-100/85">{prop.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing teaser */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+        <div className="rounded-3xl border border-emerald-200/15 bg-white/5 p-8 text-center ring-1 ring-white/10 backdrop-blur sm:p-10">
+          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-100/80">
+            Simple pricing
+          </p>
+          <div className="mt-4 flex items-end justify-center gap-2">
+            <span className="text-5xl font-bold tracking-tight text-emerald-50">
+              $59
+            </span>
+            <span className="pb-1 text-base font-medium text-emerald-100/80">
+              /month
+            </span>
+          </div>
+          <p className="mt-4 text-sm text-emerald-100/85">
+            Flat rate. No setup fees. Cancel anytime.
+          </p>
+          <Link
+            href="/signup"
+            className="mt-8 inline-block rounded-xl bg-emerald-300/20 px-6 py-3 text-sm font-semibold text-emerald-50 ring-1 ring-emerald-300/35 transition hover:bg-emerald-300/30"
+          >
+            Start your ProofClean account
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="mx-auto w-full max-w-6xl px-4 py-10 text-center text-sm text-emerald-100/60 sm:px-6">
+        <p>© {new Date().getFullYear()} ProofClean. All rights reserved.</p>
+      </footer>
+    </main>
   );
 }
