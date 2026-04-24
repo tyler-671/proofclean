@@ -180,7 +180,7 @@ export default function Home() {
           <p className="mt-6 text-center text-sm text-gray-600">
             New to ProofClean?{" "}
             
-              href="/signup"
+            <a  href="/signup"
               className="font-semibold text-emerald-800 hover:text-emerald-700"
             >
               Create an account
