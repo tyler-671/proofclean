@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -17,14 +18,31 @@ const features = [
   "Job dispatch board",
   "Photo proof records",
 ];
-
+const valueProps = [
+  {
+    title: "Everything in one place",
+    body: "See every job, every cleaner, every location on one dashboard. Finally ditch the spreadsheets.",
+  },
+  {
+    title: "Dispatch in seconds",
+    body: "Assign jobs and locations to cleaners in one click. Everyone knows what they're doing tonight.",
+  },
+  {
+    title: "Automated photo proof",
+    body: "When a job's marked complete, your client gets an instant email confirmation with a photo.",
+  },
+];
 function PricingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isFinalizingCheckout, setIsFinalizingCheckout] = useState(false);
-
+  const onSignOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    router.replace("/");
+  };
   const onGetStarted = async () => {
     setCheckoutError(null);
     setIsRedirecting(true);
@@ -125,15 +143,24 @@ function PricingContent() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 px-4 py-10 font-[family-name:var(--font-geist-sans)] text-white sm:px-6">
       <div className="mx-auto w-full max-w-4xl">
-        <header className="mb-10 flex items-center justify-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
-            <span className="text-sm font-bold tracking-tight text-emerald-100">PC</span>
-          </div>
-          <div className="leading-tight">
-            <p className="text-lg font-semibold tracking-tight text-emerald-50">ProofClean</p>
-            <p className="text-xs font-medium text-emerald-200/80">Simple pricing</p>
-          </div>
-        </header>
+      <nav className="mb-10 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 transition hover:opacity-80">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
+              <span className="text-sm font-bold tracking-tight text-emerald-100">PC</span>
+            </div>
+            <span className="text-lg font-semibold tracking-tight text-emerald-50">
+              ProofClean
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => void onSignOut()}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-emerald-100 transition hover:text-white"
+          >
+            Sign out
+          </button>
+        </nav>
+        
 
         <section className="mx-auto max-w-xl rounded-3xl border border-emerald-200/15 bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-wide text-emerald-100/80">
@@ -168,6 +195,20 @@ function PricingContent() {
           {checkoutError ? (
             <p className="mt-3 text-sm font-medium text-red-100">{checkoutError}</p>
           ) : null}
+        </section>
+
+        <section className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {valueProps.map((prop) => (
+            <div
+              key={prop.title}
+              className="rounded-3xl border border-emerald-200/15 bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur sm:p-8"
+            >
+              <h3 className="text-lg font-semibold tracking-tight text-emerald-50">
+                {prop.title}
+              </h3>
+              <p className="mt-3 text-sm text-emerald-100/85">{prop.body}</p>
+            </div>
+          ))}
         </section>
       </div>
     </main>

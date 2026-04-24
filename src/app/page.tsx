@@ -54,10 +54,10 @@ export default function LandingPage() {
           .eq("user_id", session.user.id)
           .maybeSingle();
 
-        router.replace(
-          subscription?.status === "active" ? "/dashboard" : "/pricing",
-        );
-        return;
+          if (subscription?.status === "active") {
+            router.replace("/dashboard");
+            return;
+          }
       }
 
       setIsCheckingAuth(false);
