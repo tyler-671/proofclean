@@ -186,7 +186,136 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+{/* How it works */}
+<section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
+            Up and running in under 10 minutes.
+          </h2>
+        </div>
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              step: "1",
+              title: "Add your locations",
+              body: "Set up every client location you clean. Offices, buildings, spaces — as many as you need.",
+            },
+            {
+              step: "2",
+              title: "Dispatch your crew",
+              body: "Assign cleaners to jobs for tonight, tomorrow, or the whole week. Everyone knows where they're going.",
+            },
+            {
+              step: "3",
+              title: "Clients get proof, automatically",
+              body: "When a cleaner marks a job complete, the client gets an instant email with a photo. You do nothing.",
+            },
+          ].map((item) => (
+            <div
+              key={item.step}
+              className="rounded-3xl border border-emerald-200/15 bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur sm:p-8"
+            >
+              <div className="mb-4 grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 text-sm font-bold text-emerald-200 ring-1 ring-emerald-300/20">
+                {item.step}
+              </div>
+              <h3 className="text-lg font-semibold tracking-tight text-emerald-50">
+                {item.title}
+              </h3>
+              <p className="mt-3 text-sm text-emerald-100/85">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
+      {/* Who it's for */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
+            Built for small and growing commercial cleaning companies.
+          </h2>
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-emerald-100/90">
+            If any of this sounds like you, ProofClean will save you hours every week:
+          </p>
+        </div>
+        <ul className="mx-auto mt-10 max-w-2xl space-y-4">
+          {[
+            "Running a crew of 3-50 cleaners across multiple client locations",
+            "Tired of coordinating nightly jobs through group chats and spreadsheets",
+            "Want clients to feel confident about the work without having to reassure them manually",
+          ].map((item) => (
+            <li
+              key={item}
+              className="flex items-start gap-3 rounded-2xl border border-emerald-200/15 bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-300"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span className="text-base text-emerald-50">{item}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* FAQ */}
+      <section className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-emerald-50 sm:text-4xl">
+            Common questions.
+          </h2>
+        </div>
+        <div className="mt-10 space-y-4">
+          {[
+            {
+              q: "Do I need to install anything?",
+              a: "No. ProofClean runs in your browser. Your cleaners just need a phone to mark jobs complete.",
+            },
+            {
+              q: "How do clients receive the proof?",
+              a: "Email. When a job's marked complete, we send the client a simple confirmation with a timestamped photo of the finished space.",
+            },
+            {
+              q: "How much does it cost?",
+              a: "$59/month flat. Unlimited locations, unlimited cleaners, unlimited jobs. Cancel anytime.",
+            },
+            {
+              q: "What if I only have a few locations?",
+              a: "Still works great. ProofClean pays for itself in the time you save on dispatch and client updates.",
+            },
+            {
+              q: "What happens to my data if I cancel?",
+              a: "You can export everything before canceling. We don't lock you in.",
+            },
+            {
+              q: "Is there a free trial?",
+              a: "Not yet. But you can cancel any time with one click, and we'll refund your first month if it's not for you.",
+            },
+          ].map((item) => (
+            <details
+              key={item.q}
+              className="group rounded-2xl border border-emerald-200/15 bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur"
+            >
+              <summary className="cursor-pointer list-none text-base font-semibold text-emerald-50 marker:hidden">
+                <div className="flex items-center justify-between gap-4">
+                  <span>{item.q}</span>
+                  <span className="text-emerald-300 transition group-open:rotate-45">
+                    +
+                  </span>
+                </div>
+              </summary>
+              <p className="mt-3 text-sm text-emerald-100/85">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
       {/* Footer */}
       <footer className="mx-auto w-full max-w-6xl px-4 py-10 text-center text-sm text-emerald-100/60 sm:px-6">
         <p>© {new Date().getFullYear()} ProofClean. All rights reserved.</p>
