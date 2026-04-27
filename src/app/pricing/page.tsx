@@ -17,21 +17,7 @@ const features = [
   "Automated client notifications",
   "Job dispatch board",
   "Photo proof records",
-];
-
-const valueProps = [
-  {
-    title: "Everything in one place",
-    body: "See every job, every cleaner, every location on one dashboard. Finally ditch the spreadsheets.",
-  },
-  {
-    title: "Dispatch in seconds",
-    body: "Assign jobs and locations to cleaners in one click. Everyone knows what they're doing tonight.",
-  },
-  {
-    title: "Automated photo proof",
-    body: "When a job's marked complete, your client gets an instant email confirmation with a photo.",
-  },
+  "Email support",
 ];
 
 function PricingContent() {
@@ -144,6 +130,8 @@ function PricingContent() {
     void finalizeCheckout();
   }, [router, searchParams]);
 
+  const isBusy = isRedirecting || isFinalizingCheckout;
+
   return (
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
       {/* Top nav */}
@@ -176,21 +164,44 @@ function PricingContent() {
         </button>
       </nav>
 
-      {/* Pricing card */}
-      <section className="mx-auto w-full max-w-xl px-4 pb-12 pt-8 sm:px-6">
-        <div className="rounded-3xl bg-white p-8 shadow-sm ring-1 ring-slate-200 sm:p-10">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-            Growth plan
-          </p>
-          <div className="mt-4 flex items-end gap-2">
-            <span className="text-5xl font-bold tracking-tight text-slate-900">$59</span>
-            <span className="pb-1 text-base font-medium text-slate-500">/month</span>
+      {/* Page header */}
+      <section className="mx-auto w-full max-w-xl px-4 pt-8 text-center sm:px-6 sm:pt-12">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+          You're one step away.
+        </h1>
+        <p className="mt-3 text-sm text-slate-600 sm:text-base">
+          Subscribe to start dispatching tonight.
+        </p>
+      </section>
+
+      {/* Unified pricing card */}
+      <section className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+          {/* Header + price */}
+          <div className="px-7 pb-6 pt-7">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+              Growth plan
+            </p>
+            <div className="mt-3 flex items-baseline gap-1">
+              <span className="text-5xl font-bold tracking-tight text-slate-900">$59</span>
+              <span className="text-sm text-slate-500">/month</span>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Flat rate. No setup fees. Cancel anytime.
+            </p>
           </div>
 
-          <ul className="mt-8 space-y-3">
-            {features.map((feature) => (
-              <li key={feature} className="flex items-center gap-3 text-sm text-slate-700">
-                <div className="grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-emerald-100">
+          {/* Divider */}
+          <div className="mx-7 border-t border-slate-200"></div>
+
+          {/* Features */}
+          <div className="px-7 py-6">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              What's included
+            </p>
+            <ul className="space-y-3">
+              {features.map((feature) => (
+                <li key={feature} className="flex items-center gap-3 text-sm text-slate-700">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -199,60 +210,49 @@ function PricingContent() {
                     strokeWidth="3"
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    className="h-3 w-3 text-emerald-600"
+                    className="h-4 w-4 flex-shrink-0 text-emerald-500"
                   >
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                </div>
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => void onGetStarted()}
-            disabled={isRedirecting || isFinalizingCheckout}
-            className="mt-10 w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isRedirecting
-              ? "Redirecting..."
-              : isFinalizingCheckout
-                ? "Finalizing checkout..."
-                : "Get started"}
-          </button>
-          {checkoutError ? (
-            <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-              {checkoutError}
-            </p>
-          ) : null}
-        </div>
+          {/* Divider */}
+          <div className="mx-7 border-t border-slate-200"></div>
 
-        {/* Value props (reminder before paying) */}
-        <section className="mx-auto mt-10 flex flex-col gap-4">
-          {valueProps.map((prop) => (
-            <div key={prop.title} className="rounded-2xl bg-white p-6 ring-1 ring-slate-200">
-              <div className="mb-4 grid h-9 w-9 place-items-center rounded-xl bg-emerald-100">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4 text-emerald-600"
-                >
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              </div>
-              <h3 className="text-base font-semibold tracking-tight text-slate-900">
-                {prop.title}
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">{prop.body}</p>
+          {/* CTA + Risk-free */}
+          <div className="px-7 pb-7 pt-6">
+            <button
+              type="button"
+              onClick={() => void onGetStarted()}
+              disabled={isBusy}
+              className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isRedirecting
+                ? "Redirecting..."
+                : isFinalizingCheckout
+                  ? "Finalizing checkout..."
+                  : "Get started"}
+            </button>
+
+            {/* Risk-free banner */}
+            <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-200">
+              <p className="text-sm text-slate-700">
+                <span className="font-bold text-emerald-700">Risk-free.</span>{" "}
+                Cancel within your first month for a full refund.
+              </p>
             </div>
-          ))}
-        </section>
+
+            {checkoutError ? (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                {checkoutError}
+              </p>
+            ) : null}
+          </div>
+        </div>
       </section>
     </main>
   );
