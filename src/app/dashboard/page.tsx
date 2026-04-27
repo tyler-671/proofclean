@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -125,7 +126,17 @@ export default function DashboardPage() {
             : "Pending",
     }));
 
-    setJobs(mappedJobs);
+    const sortedJobs = [...mappedJobs].sort((a, b) => {
+      const aIsComplete = a.status === "Complete";
+      const bIsComplete = b.status === "Complete";
+
+      if (aIsComplete && !bIsComplete) return 1;
+      if (!aIsComplete && bIsComplete) return -1;
+
+      return 0;
+    });
+
+    setJobs(sortedJobs);
     setIsLoadingJobs(false);
   }, [router]);
 
@@ -188,12 +199,12 @@ export default function DashboardPage() {
   const toDbStatus = (status: JobStatus): DbJobStatus =>
     status === "Complete" ? "complete" : status === "In progress" ? "in_progress" : "pending";
 
-  const getStatusSelectStyles = (status: DbJobStatus) =>
+  const getStatusBadgeStyles = (status: DbJobStatus) =>
     status === "complete"
-      ? "border-emerald-300/30 bg-emerald-400/15 text-emerald-100"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : status === "in_progress"
-        ? "border-amber-300/30 bg-amber-400/15 text-amber-100"
-        : "border-slate-300/20 bg-slate-300/10 text-slate-100";
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-slate-200 bg-slate-50 text-slate-700";
 
   const statusOptions: DbJobStatus[] = ["pending", "in_progress", "complete"];
 
@@ -219,13 +230,6 @@ export default function DashboardPage() {
 
       if (job) {
         try {
-          console.log("Calling /api/notify for completed job", {
-            jobId,
-            location_name: job.location,
-            cleaner_name: job.cleaner,
-            client_email: "tyler671@gmail.com",
-          });
-
           const notifyResponse = await fetch("/api/notify", {
             method: "POST",
             headers: {
@@ -242,12 +246,6 @@ export default function DashboardPage() {
             | { error?: string; success?: boolean }
             | null;
 
-          console.log("Response from /api/notify", {
-            ok: notifyResponse.ok,
-            status: notifyResponse.status,
-            body: notifyResult,
-          });
-
           if (!notifyResponse.ok) {
             setJobsError(
               notifyResult?.error ??
@@ -255,7 +253,6 @@ export default function DashboardPage() {
             );
           }
         } catch {
-          console.log("Error calling /api/notify for completed job", { jobId });
           setJobsError("Status updated, but failed to send completion notification email.");
         }
       }
@@ -267,35 +264,35 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 font-[family-name:var(--font-geist-sans)] text-white">
-      <header className="sticky top-0 z-10 border-b border-white/10 bg-emerald-950/50 backdrop-blur">
+    <div className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5 text-emerald-300"
-            >
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
+          <Link href="/" className="flex items-center gap-3 transition hover:opacity-80">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
             </div>
             <div className="leading-tight">
-              <p className="text-base font-semibold tracking-tight text-emerald-50">ProofClean</p>
-              <p className="text-xs font-medium text-emerald-200/80">Dashboard</p>
+              <p className="text-base font-semibold tracking-tight text-slate-900">ProofClean</p>
+              <p className="text-xs font-medium text-slate-500">Dashboard</p>
             </div>
-          </div>
+          </Link>
 
           <button
             type="button"
             onClick={onSignOut}
             disabled={!supabase || isSigningOut}
-            className="rounded-lg bg-white/10 px-3.5 py-2 text-sm font-semibold text-emerald-50 ring-1 ring-white/15 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSigningOut ? "Signing out..." : "Sign out"}
           </button>
@@ -304,10 +301,10 @@ export default function DashboardPage() {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <section className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-emerald-50 sm:text-3xl">
-            Tonight’s operations
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            Tonight&apos;s operations
           </h1>
-          <p className="mt-2 text-sm font-medium text-emerald-100/75">
+          <p className="mt-2 text-sm font-medium text-slate-600">
             Real-time proof of clean, status snapshots, and client-ready updates.
           </p>
         </section>
@@ -316,12 +313,12 @@ export default function DashboardPage() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className="rounded-2xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur"
+              className="rounded-2xl border border-slate-200 bg-white p-5"
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-100/70">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {stat.label}
               </p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-emerald-50">
+              <p className="mt-3 text-3xl font-bold tracking-tight text-slate-900">
                 {stat.value}
               </p>
             </div>
@@ -331,8 +328,8 @@ export default function DashboardPage() {
         <section className="mt-10">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-emerald-50">Jobs</h2>
-              <p className="mt-1 text-sm font-medium text-emerald-100/70">
+              <h2 className="text-lg font-bold tracking-tight text-slate-900">Jobs</h2>
+              <p className="mt-1 text-sm font-medium text-slate-600">
                 Jobs for your current account.
               </p>
             </div>
@@ -342,7 +339,7 @@ export default function DashboardPage() {
                 setIsAddJobOpen((prev) => !prev);
                 setAddJobError(null);
               }}
-              className="rounded-lg bg-emerald-400/10 px-3.5 py-2 text-sm font-semibold text-emerald-100 ring-1 ring-emerald-300/30 transition hover:bg-emerald-400/20"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
             >
               + Add Job
             </button>
@@ -351,13 +348,13 @@ export default function DashboardPage() {
           {isAddJobOpen ? (
             <form
               onSubmit={onAddJobSubmit}
-              className="mt-4 rounded-2xl bg-white/5 p-5 ring-1 ring-white/10 backdrop-blur"
+              className="mt-4 rounded-2xl border border-slate-200 bg-white p-5"
             >
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label
                     htmlFor="locationName"
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/80"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     Location Name
                   </label>
@@ -368,14 +365,14 @@ export default function DashboardPage() {
                     required
                     value={locationName}
                     onChange={(event) => setLocationName(event.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-50 placeholder:text-emerald-200/50 focus:border-emerald-300/40 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     placeholder="Main Office"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="cleanerName"
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/80"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     Cleaner Name
                   </label>
@@ -386,14 +383,14 @@ export default function DashboardPage() {
                     required
                     value={cleanerName}
                     onChange={(event) => setCleanerName(event.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-50 placeholder:text-emerald-200/50 focus:border-emerald-300/40 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                     placeholder="Alex Johnson"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="jobDate"
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/80"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     Job Date
                   </label>
@@ -404,13 +401,13 @@ export default function DashboardPage() {
                     required
                     value={jobDate}
                     onChange={(event) => setJobDate(event.target.value)}
-                    className="w-full rounded-lg border border-white/15 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-50 focus:border-emerald-300/40 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   />
                 </div>
                 <div>
                   <label
                     htmlFor="jobStatus"
-                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/80"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
                     Status
                   </label>
@@ -420,7 +417,7 @@ export default function DashboardPage() {
                     required
                     value={jobStatus}
                     onChange={(event) => setJobStatus(event.target.value as DbJobStatus)}
-                    className="w-full rounded-lg border border-white/15 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-50 focus:border-emerald-300/40 focus:outline-none focus:ring-2 focus:ring-emerald-300/20"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   >
                     <option value="pending">pending</option>
                     <option value="in_progress">in_progress</option>
@@ -429,7 +426,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               {addJobError ? (
-                <p className="mt-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-medium text-red-100 ring-1 ring-red-200/30">
+                <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                   Could not add job: {addJobError}
                 </p>
               ) : null}
@@ -441,14 +438,14 @@ export default function DashboardPage() {
                     setAddJobError(null);
                     setJobDate(getTodayDateInputValue());
                   }}
-                  className="rounded-lg bg-white/10 px-3.5 py-2 text-sm font-semibold text-emerald-50 ring-1 ring-white/15 transition hover:bg-white/15"
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingJob}
-                  className="rounded-lg bg-emerald-300/15 px-3.5 py-2 text-sm font-semibold text-emerald-50 ring-1 ring-emerald-300/25 transition hover:bg-emerald-300/25 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmittingJob ? "Adding..." : "Save Job"}
                 </button>
@@ -458,32 +455,32 @@ export default function DashboardPage() {
 
           <div className="mt-4 grid gap-4">
             {isLoadingJobs ? (
-              <div className="rounded-2xl bg-white/5 p-5 text-sm font-medium text-emerald-100/80 ring-1 ring-white/10">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-slate-600">
                 Loading jobs...
               </div>
             ) : jobsError ? (
-              <div className="rounded-2xl bg-red-500/10 p-5 text-sm font-medium text-red-100 ring-1 ring-red-200/30">
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-700">
                 Could not load jobs: {jobsError}
               </div>
             ) : jobs.length === 0 ? (
-              <div className="rounded-2xl bg-white/5 p-5 text-sm font-medium text-emerald-100/80 ring-1 ring-white/10">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-slate-600">
                 No jobs found yet.
               </div>
             ) : (
               jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex flex-col justify-between gap-4 rounded-2xl border border-emerald-200/15 bg-white/5 p-6 ring-1 ring-white/10 sm:flex-row sm:items-center"
+                  className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:flex-row sm:items-center"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-lg font-bold tracking-tight text-emerald-50 sm:text-xl">
+                    <p className="truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
                       {job.location}
                     </p>
-                    <p className="mt-1.5 text-sm font-medium text-emerald-100/70">
-                      Cleaner: <span className="text-emerald-100">{job.cleaner}</span>
+                    <p className="mt-1.5 text-sm font-medium text-slate-600">
+                      Cleaner: <span className="text-slate-900">{job.cleaner}</span>
                     </p>
-                    <p className="mt-1 text-sm font-medium text-emerald-100/70">
-                      Job Date: <span className="text-emerald-100">{job.jobDate ?? "Not set"}</span>
+                    <p className="mt-1 text-sm font-medium text-slate-600">
+                      Job Date: <span className="text-slate-900">{job.jobDate ?? "Not set"}</span>
                     </p>
                   </div>
 
@@ -496,7 +493,7 @@ export default function DashboardPage() {
                       onClick={() =>
                         setOpenStatusMenuJobId((prev) => (prev === job.id ? null : job.id))
                       }
-                      className={`min-w-[9rem] rounded-full border px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-70 ${getStatusSelectStyles(
+                      className={`min-w-[9rem] rounded-full border px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-70 ${getStatusBadgeStyles(
                         toDbStatus(job.status),
                       )}`}
                     >
@@ -508,7 +505,7 @@ export default function DashboardPage() {
                     {openStatusMenuJobId === job.id ? (
                       <div
                         role="menu"
-                        className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-emerald-200/20 bg-emerald-950/95 p-1.5 shadow-lg shadow-black/30 ring-1 ring-white/10 backdrop-blur"
+                        className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
                       >
                         {statusOptions.map((statusOption) => {
                           const isCurrentStatus = statusOption === toDbStatus(job.status);
@@ -519,7 +516,7 @@ export default function DashboardPage() {
                               role="menuitem"
                               disabled={isCurrentStatus || updatingJobId === job.id}
                               onClick={() => void onJobStatusChange(job.id, statusOption)}
-                              className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-emerald-50 transition hover:bg-emerald-800/70 focus:bg-emerald-800/70 focus:outline-none disabled:cursor-default disabled:bg-emerald-700/50 disabled:text-emerald-200"
+                              className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 focus:text-emerald-700 focus:outline-none disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400"
                             >
                               {statusOption}
                             </button>
@@ -537,4 +534,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
