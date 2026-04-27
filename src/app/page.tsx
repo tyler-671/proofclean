@@ -118,10 +118,12 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto w-full max-w-6xl px-4 pb-16 pt-12 sm:px-6 sm:pt-20">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-emerald-50 sm:text-5xl lg:text-6xl">
+        <h1 className="text-4xl font-bold tracking-tight text-emerald-50 sm:text-5xl lg:text-6xl">
             Dispatch your team.
             <br />
-            Update clients automatically.
+            Cleaner takes the photo.
+            <br />
+            Client receives it automatically.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-emerald-100/90 sm:text-xl">
             Dispatch jobs, organize your crew, and send clients automated photo
