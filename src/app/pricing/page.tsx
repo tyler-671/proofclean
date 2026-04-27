@@ -229,7 +229,7 @@ function PricingContent() {
         </div>
 
         {/* Value props (reminder before paying) */}
-        <section className="mx-auto mt-10 grid max-w-4xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mx-auto mt-10 flex flex-col gap-4">
           {valueProps.map((prop) => (
             <div key={prop.title} className="rounded-2xl bg-white p-6 ring-1 ring-slate-200">
               <div className="mb-4 grid h-9 w-9 place-items-center rounded-xl bg-emerald-100">
