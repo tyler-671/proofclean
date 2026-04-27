@@ -167,7 +167,7 @@ function PricingContent() {
       {/* Page header */}
       <section className="mx-auto w-full max-w-xl px-4 pt-8 text-center sm:px-6 sm:pt-12">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          You're one step away.
+        You&apos;re one step away.
         </h1>
         <p className="mt-3 text-sm text-slate-600 sm:text-base">
           Subscribe to start dispatching tonight.
@@ -197,7 +197,7 @@ function PricingContent() {
           {/* Features */}
           <div className="px-7 py-6">
             <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              What's included
+            What&apos;s included
             </p>
             <ul className="space-y-3">
               {features.map((feature) => (
