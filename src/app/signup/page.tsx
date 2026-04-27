@@ -73,133 +73,134 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-950 to-emerald-900 px-4 py-6 font-[family-name:var(--font-geist-sans)] sm:px-6">
+    <div className="min-h-screen bg-[#f7fafa] px-4 py-6 font-[family-name:var(--font-geist-sans)] sm:px-6">
       <nav className="mx-auto w-full max-w-6xl">
         <Link href="/" className="inline-flex items-center gap-3 transition hover:opacity-80">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-400/10 ring-1 ring-emerald-300/20">
-          <svg
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500">
+            <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="currentColor"
+              stroke="white"
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-5 w-5 text-emerald-300"
+              className="h-5 w-5"
             >
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
           </div>
-          <span className="text-lg font-semibold tracking-tight text-emerald-50">
+          <span className="text-base font-semibold tracking-tight text-slate-900">
             ProofClean
           </span>
         </Link>
       </nav>
+
       <div className="flex items-center justify-center py-12">
-      <div className="w-full max-w-[420px]">
-        <div className="rounded-2xl bg-white p-8 shadow-2xl shadow-black/25 ring-1 ring-black/5 sm:p-10">
-          <header className="mb-8 text-center">
-            <p className="text-2xl font-bold tracking-tight text-emerald-950 sm:text-3xl">
-              ProofClean
-            </p>
-            <p className="mt-2 text-sm font-medium text-emerald-800/85">
-              Create your account
-            </p>
-          </header>
-
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            <div>
-              <label
-                htmlFor="email"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="you@company.com"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="At least 8 characters"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="mb-1.5 block text-sm font-medium text-gray-700"
-              >
-                Confirm password
-              </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 transition focus:border-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-900/20"
-                placeholder="Re-enter your password"
-              />
-            </div>
-            {statusMessage ? (
-              <p
-                className={`rounded-lg border px-4 py-3 text-sm font-medium ${
-                  statusType === "error"
-                    ? "border-red-200 bg-red-50 text-red-700"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-800"
-                }`}
-              >
-                {statusMessage}
+        <div className="w-full max-w-[420px]">
+          <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-slate-200 sm:p-10">
+            <header className="mb-8 text-center">
+              <p className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                Create your account
               </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-lg bg-emerald-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-950 focus:ring-offset-2"
-            >
-              {isSubmitting ? "Creating account..." : "Create account"}
-            </button>
-          </form>
+              <p className="mt-2 text-sm font-medium text-slate-600">
+                Start running your cleaning crew with ProofClean
+              </p>
+            </header>
 
-          <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
-            <p className="text-sm text-emerald-900">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-700"
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="you@company.com"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Password
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="At least 8 characters"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="confirmPassword"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="Re-enter your password"
+                />
+              </div>
+              {statusMessage ? (
+                <p
+                  className={`rounded-lg border px-4 py-3 text-sm font-medium ${
+                    statusType === "error"
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  }`}
+                >
+                  {statusMessage}
+                </p>
+              ) : null}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-lg bg-emerald-500 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Sign in here
-              </Link>
-            </p>
+                {isSubmitting ? "Creating account..." : "Create account"}
+              </button>
+            </form>
+
+            <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center">
+              <p className="text-sm text-slate-700">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-bold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                >
+                  Sign in here
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );
