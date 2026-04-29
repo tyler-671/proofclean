@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [jobs, setJobs] = useState<DashboardJob[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [locationName, setLocationName] = useState("");
@@ -81,7 +82,7 @@ export default function DashboardPage() {
     }
 
     const user = session.user;
-
+    if (!isAuthChecked) setIsAuthChecked(true);
     const { data: subscription, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("status")
@@ -262,7 +263,9 @@ export default function DashboardPage() {
     setUpdatingJobId(null);
     setOpenStatusMenuJobId(null);
   };
-
+  if (!isAuthChecked) {
+    return <div className="min-h-screen bg-[#f7fafa]" />;
+  }
   return (
     <div className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
