@@ -72,15 +72,15 @@ export default function DashboardPage() {
     setJobsError(null);
 
     const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
 
-    if (userError || !user) {
-      setJobsError(userError?.message ?? "Could not load authenticated user.");
-      setIsLoadingJobs(false);
+    if (!session?.user) {
+      router.replace("/login");
       return;
     }
+
+    const user = session.user;
 
     const { data: subscription, error: subscriptionError } = await supabase
       .from("subscriptions")
