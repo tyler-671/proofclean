@@ -176,7 +176,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pt-20">
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-          Crew dispatch, organized.
+        Crew dispatch, simplified.
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base text-slate-600 sm:text-lg">
           Plan jobs, assign cleaners, and see your whole operation at a glance.
