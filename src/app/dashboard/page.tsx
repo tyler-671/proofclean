@@ -17,17 +17,36 @@ type DbJobStatus = "pending" | "in_progress" | "complete";
 type JobRow = {
   id: string;
   location_name: string;
+  location_id: string | null;
   cleaner_name: string;
   status: DbJobStatus;
   job_date: string | null;
+  locations:
+    | { name: string; clients: { name: string } | { name: string }[] | null }
+    | { name: string; clients: { name: string } | { name: string }[] | null }[]
+    | null;
 };
 
 type DashboardJob = {
   id: string;
   location: string;
+  locationId: string | null;
+  clientName: string | null;
   cleaner: string;
   status: JobStatus;
   jobDate: string | null;
+};
+
+type LocationOption = {
+  id: string;
+  name: string;
+  clientName: string;
+};
+
+type LocationRow = {
+  id: string;
+  name: string;
+  clients: { name: string } | { name: string }[] | null;
 };
 
 const getTodayDateInputValue = () => new Date().toISOString().split("T")[0];
@@ -40,7 +59,8 @@ export default function DashboardPage() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
-  const [locationName, setLocationName] = useState("");
+  const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [locationId, setLocationId] = useState("");
   const [cleanerName, setCleanerName] = useState("");
   const [jobStatus, setJobStatus] = useState<DbJobStatus>("pending");
   const [jobDate, setJobDate] = useState(getTodayDateInputValue);
@@ -101,9 +121,33 @@ export default function DashboardPage() {
       return;
     }
 
+    const { data: locationsData, error: locationsError } = await supabase
+      .from("locations")
+      .select("id, name, clients(name)")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true });
+
+    if (locationsError) {
+      setJobsError(locationsError.message);
+      setIsLoadingJobs(false);
+      return;
+    }
+
+    const mappedLocations: LocationOption[] = (((locationsData ?? []) as LocationRow[]).map(
+      (location) => ({
+      id: location.id,
+      name: location.name,
+      clientName: Array.isArray(location.clients)
+        ? (location.clients[0]?.name ?? "Unknown client")
+        : (location.clients?.name ?? "Unknown client"),
+      }),
+    ));
+
+    setLocations(mappedLocations);
+
     const { data, error } = await supabase
       .from("jobs")
-      .select("id, location_name, cleaner_name, status, job_date")
+      .select("id, location_name, location_id, cleaner_name, status, job_date, locations(name, clients(name))")
       .eq("user_id", user.id)
       .order("job_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -114,18 +158,26 @@ export default function DashboardPage() {
       return;
     }
 
-    const mappedJobs: DashboardJob[] = (data as JobRow[]).map((job) => ({
-      id: job.id,
-      location: job.location_name,
-      cleaner: job.cleaner_name,
-      jobDate: job.job_date,
-      status:
-        job.status === "complete"
-          ? "Complete"
-          : job.status === "in_progress"
-            ? "In progress"
-            : "Pending",
-    }));
+    const mappedJobs: DashboardJob[] = (data as JobRow[]).map((job) => {
+      const jobLocation = Array.isArray(job.locations) ? (job.locations[0] ?? null) : job.locations;
+
+      return {
+        id: job.id,
+        location: job.location_name || jobLocation?.name || "Unknown location",
+        locationId: job.location_id,
+        clientName: Array.isArray(jobLocation?.clients)
+          ? (jobLocation?.clients[0]?.name ?? null)
+          : (jobLocation?.clients?.name ?? null),
+        cleaner: job.cleaner_name,
+        jobDate: job.job_date,
+        status:
+          job.status === "complete"
+            ? "Complete"
+            : job.status === "in_progress"
+              ? "In progress"
+              : "Pending",
+      };
+    });
 
     const sortedJobs = [...mappedJobs].sort((a, b) => {
       const aIsComplete = a.status === "Complete";
@@ -159,6 +211,10 @@ export default function DashboardPage() {
       setAddJobError("Supabase environment variables are missing.");
       return;
     }
+    if (!locationId) {
+      setAddJobError("Please select a location.");
+      return;
+    }
 
     setIsSubmittingJob(true);
     setAddJobError(null);
@@ -176,7 +232,8 @@ export default function DashboardPage() {
 
     const { error } = await supabase.from("jobs").insert({
       user_id: user.id,
-      location_name: locationName,
+      location_id: locationId,
+      location_name: locations.find((location) => location.id === locationId)?.name ?? "",
       cleaner_name: cleanerName,
       status: jobStatus,
       job_date: jobDate,
@@ -188,7 +245,7 @@ export default function DashboardPage() {
       return;
     }
 
-    setLocationName("");
+    setLocationId("");
     setCleanerName("");
     setJobStatus("pending");
     setJobDate(getTodayDateInputValue());
@@ -229,7 +286,7 @@ export default function DashboardPage() {
     if (nextStatus === "complete") {
       const job = jobs.find((item) => item.id === jobId);
 
-      if (job) {
+      if (job?.locationId) {
         try {
           const notifyResponse = await fetch("/api/notify", {
             method: "POST",
@@ -239,7 +296,7 @@ export default function DashboardPage() {
             body: JSON.stringify({
               location_name: job.location,
               cleaner_name: job.cleaner,
-              client_email: "tyler671@gmail.com",
+              location_id: job.locationId,
             }),
           });
 
@@ -361,6 +418,9 @@ export default function DashboardPage() {
               onClick={() => {
                 setIsAddJobOpen((prev) => !prev);
                 setAddJobError(null);
+                if (!isAddJobOpen && locations.length > 0) {
+                  setLocationId(locations[0].id);
+                }
               }}
               className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
             >
@@ -376,21 +436,25 @@ export default function DashboardPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <label
-                    htmlFor="locationName"
+                    htmlFor="locationId"
                     className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
-                    Location Name
+                    Location
                   </label>
-                  <input
-                    id="locationName"
-                    name="locationName"
-                    type="text"
+                  <select
+                    id="locationId"
+                    name="locationId"
                     required
-                    value={locationName}
-                    onChange={(event) => setLocationName(event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    placeholder="Main Office"
-                  />
+                    value={locationId}
+                    onChange={(event) => setLocationId(event.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  >
+                    {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name} ({location.clientName})
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label
@@ -452,6 +516,14 @@ export default function DashboardPage() {
                 <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                   Could not add job: {addJobError}
                 </p>
+              ) : locations.length === 0 ? (
+                <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+                  Add a location first.{" "}
+                  <Link href="/locations" className="font-semibold text-emerald-700 hover:text-emerald-800">
+                    Go to Locations
+                  </Link>
+                  .
+                </p>
               ) : null}
               <div className="mt-4 flex items-center justify-end gap-3">
                 <button
@@ -460,6 +532,7 @@ export default function DashboardPage() {
                     setIsAddJobOpen(false);
                     setAddJobError(null);
                     setJobDate(getTodayDateInputValue());
+                    setLocationId("");
                   }}
                   className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
                 >
@@ -467,7 +540,7 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingJob}
+                  disabled={isSubmittingJob || locations.length === 0}
                   className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmittingJob ? "Adding..." : "Save Job"}
@@ -502,6 +575,11 @@ export default function DashboardPage() {
                     <p className="mt-1.5 text-sm font-medium text-slate-600">
                       Cleaner: <span className="text-slate-900">{job.cleaner}</span>
                     </p>
+                    {job.clientName ? (
+                      <p className="mt-1 text-sm font-medium text-slate-600">
+                        Client: <span className="text-slate-900">{job.clientName}</span>
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-sm font-medium text-slate-600">
                       Job Date: <span className="text-slate-900">{job.jobDate ?? "Not set"}</span>
                     </p>
