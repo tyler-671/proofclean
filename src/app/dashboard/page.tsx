@@ -292,6 +292,12 @@ export default function DashboardPage() {
           </Link>
 
           <div className="flex items-center gap-2">
+          <Link
+              href="/dashboard"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
+            >
+              Dashboard
+            </Link>
             <Link
               href="/clients"
               className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"

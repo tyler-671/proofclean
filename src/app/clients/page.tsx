@@ -234,10 +234,9 @@ export default function ClientsPage() {
             >
               Dashboard
             </Link>
-            <div className="flex items-center gap-2">
             <Link
               href="/clients"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
             >
               Clients
             </Link>
@@ -249,7 +248,6 @@ export default function ClientsPage() {
             >
               {isSigningOut ? "Signing out..." : "Sign out"}
             </button>
-          </div>
           </div>
         </div>
       </header>
