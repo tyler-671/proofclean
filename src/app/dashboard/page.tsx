@@ -451,7 +451,7 @@ export default function DashboardPage() {
                   >
                     {locations.map((location) => (
                       <option key={location.id} value={location.id}>
-                        {location.name} ({location.clientName})
+                        {location.clientName} - {location.name}
                       </option>
                     ))}
                   </select>
