@@ -11,29 +11,43 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-type Client = {
+type ClientOption = {
   id: string;
   name: string;
-  email: string;
 };
 
-export default function ClientsPage() {
+type LocationRow = {
+  id: string;
+  name: string;
+  client_id: string;
+  clients: { name: string } | { name: string }[] | null;
+};
+
+type Location = {
+  id: string;
+  name: string;
+  client_id: string;
+  client_name: string;
+};
+
+export default function LocationsPage() {
   const router = useRouter();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [clients, setClients] = useState<Client[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [clientId, setClientId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
 
-  const fetchClients = useCallback(async () => {
+  const fetchLocations = useCallback(async () => {
     if (!supabase) {
       setLoadError("Supabase environment variables are missing.");
       setIsLoading(false);
@@ -73,9 +87,24 @@ export default function ClientsPage() {
       return;
     }
 
-    const { data, error } = await supabase
+    const { data: clientsData, error: clientsError } = await supabase
       .from("clients")
-      .select("id, name, email")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true });
+
+    if (clientsError) {
+      setLoadError(clientsError.message);
+      setIsLoading(false);
+      return;
+    }
+
+    const clientOptions = (clientsData as ClientOption[]) ?? [];
+    setClients(clientOptions);
+
+    const { data, error } = await supabase
+      .from("locations")
+      .select("id, name, client_id, clients(name)")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
 
@@ -85,13 +114,22 @@ export default function ClientsPage() {
       return;
     }
 
-    setClients((data as Client[]) ?? []);
+    const mappedLocations: Location[] = ((data as LocationRow[]) ?? []).map((location) => ({
+      id: location.id,
+      name: location.name,
+      client_id: location.client_id,
+      client_name: Array.isArray(location.clients)
+        ? (location.clients[0]?.name ?? "Unknown client")
+        : (location.clients?.name ?? "Unknown client"),
+    }));
+
+    setLocations(mappedLocations);
     setIsLoading(false);
   }, [router, isAuthChecked]);
 
   useEffect(() => {
-    void fetchClients();
-  }, [fetchClients]);
+    void fetchLocations();
+  }, [fetchLocations]);
 
   const onSignOut = async () => {
     if (!supabase) return;
@@ -101,26 +139,27 @@ export default function ClientsPage() {
   };
 
   const openAddForm = () => {
-    setEditingClientId(null);
+    if (clients.length === 0) return;
+    setEditingLocationId(null);
     setName("");
-    setEmail("");
+    setClientId(clients[0].id);
     setFormError(null);
     setIsFormOpen(true);
   };
 
-  const openEditForm = (client: Client) => {
-    setEditingClientId(client.id);
-    setName(client.name);
-    setEmail(client.email);
+  const openEditForm = (location: Location) => {
+    setEditingLocationId(location.id);
+    setName(location.name);
+    setClientId(location.client_id);
     setFormError(null);
     setIsFormOpen(true);
   };
 
   const closeForm = () => {
     setIsFormOpen(false);
-    setEditingClientId(null);
+    setEditingLocationId(null);
     setName("");
-    setEmail("");
+    setClientId("");
     setFormError(null);
   };
 
@@ -146,11 +185,11 @@ export default function ClientsPage() {
       return;
     }
 
-    if (editingClientId) {
+    if (editingLocationId) {
       const { error } = await supabase
-        .from("clients")
-        .update({ name: name.trim(), email: email.trim() })
-        .eq("id", editingClientId);
+        .from("locations")
+        .update({ name: name.trim(), client_id: clientId })
+        .eq("id", editingLocationId);
 
       if (error) {
         setFormError(error.message);
@@ -158,10 +197,10 @@ export default function ClientsPage() {
         return;
       }
     } else {
-      const { error } = await supabase.from("clients").insert({
+      const { error } = await supabase.from("locations").insert({
         user_id: user.id,
+        client_id: clientId,
         name: name.trim(),
-        email: email.trim(),
       });
 
       if (error) {
@@ -173,29 +212,27 @@ export default function ClientsPage() {
 
     setIsSubmitting(false);
     closeForm();
-    await fetchClients();
+    await fetchLocations();
   };
 
-  const onDelete = async (clientId: string) => {
+  const onDelete = async (locationId: string) => {
     if (!supabase) return;
 
-    const confirmed = window.confirm(
-      "Delete this client? Any locations linked to this client will also be deleted.",
-    );
+    const confirmed = window.confirm("Delete this location?");
     if (!confirmed) return;
 
-    setDeletingClientId(clientId);
+    setDeletingLocationId(locationId);
 
-    const { error } = await supabase.from("clients").delete().eq("id", clientId);
+    const { error } = await supabase.from("locations").delete().eq("id", locationId);
 
     if (error) {
       setLoadError(error.message);
-      setDeletingClientId(null);
+      setDeletingLocationId(null);
       return;
     }
 
-    setDeletingClientId(null);
-    await fetchClients();
+    setDeletingLocationId(null);
+    await fetchLocations();
   };
 
   if (!isAuthChecked) {
@@ -223,7 +260,7 @@ export default function ClientsPage() {
             </div>
             <div className="leading-tight">
               <p className="text-base font-semibold tracking-tight text-slate-900">ProofClean</p>
-              <p className="text-xs font-medium text-slate-500">Clients</p>
+              <p className="text-xs font-medium text-slate-500">Locations</p>
             </div>
           </Link>
 
@@ -236,13 +273,13 @@ export default function ClientsPage() {
             </Link>
             <Link
               href="/clients"
-              className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
             >
               Clients
             </Link>
             <Link
               href="/locations"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+              className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700"
             >
               Locations
             </Link>
@@ -262,18 +299,19 @@ export default function ClientsPage() {
         <section className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Clients
+              Locations
             </h1>
             <p className="mt-2 text-sm font-medium text-slate-600">
-              The companies and contacts you clean for.
+              The places you service for each client.
             </p>
           </div>
           <button
             type="button"
             onClick={openAddForm}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+            disabled={clients.length === 0}
+            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            + Add Client
+            + Add Location
           </button>
         </section>
 
@@ -283,7 +321,7 @@ export default function ClientsPage() {
             className="mb-6 rounded-2xl border border-slate-200 bg-white p-5"
           >
             <p className="mb-4 text-sm font-semibold text-slate-900">
-              {editingClientId ? "Edit client" : "Add client"}
+              {editingLocationId ? "Edit location" : "Add location"}
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -291,7 +329,7 @@ export default function ClientsPage() {
                   htmlFor="name"
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  Client Name
+                  Location Name
                 </label>
                 <input
                   id="name"
@@ -301,26 +339,30 @@ export default function ClientsPage() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  placeholder="Acme Corp"
+                  placeholder="Main Office"
                 />
               </div>
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor="clientId"
                   className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                 >
-                  Contact Email
+                  Client
                 </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
+                <select
+                  id="clientId"
+                  name="clientId"
                   required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  placeholder="contact@acme.com"
-                />
+                  value={clientId}
+                  onChange={(event) => setClientId(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             {formError ? (
@@ -343,9 +385,9 @@ export default function ClientsPage() {
               >
                 {isSubmitting
                   ? "Saving..."
-                  : editingClientId
+                  : editingLocationId
                     ? "Save changes"
-                    : "Add client"}
+                    : "Add location"}
               </button>
             </div>
           </form>
@@ -354,48 +396,60 @@ export default function ClientsPage() {
         <div className="grid gap-4">
           {isLoading ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-slate-600">
-              Loading clients...
+              Loading locations...
             </div>
           ) : loadError ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-700">
-              Could not load clients: {loadError}
+              Could not load locations: {loadError}
             </div>
           ) : clients.length === 0 ? (
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
               <p className="text-sm font-medium text-slate-600">
-                No clients yet. Click <span className="font-semibold text-slate-900">+ Add Client</span> to add your first one.
+                Add a client first before adding locations.{" "}
+                <Link href="/clients" className="font-semibold text-emerald-700 hover:text-emerald-800">
+                  Go to Clients
+                </Link>
+                .
+              </p>
+            </div>
+          ) : locations.length === 0 ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+              <p className="text-sm font-medium text-slate-600">
+                No locations yet. Click{" "}
+                <span className="font-semibold text-slate-900">+ Add Location</span> to add your
+                first one.
               </p>
             </div>
           ) : (
-            clients.map((client) => (
+            locations.map((location) => (
               <div
-                key={client.id}
+                key={location.id}
                 className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:flex-row sm:items-center"
               >
                 <div className="min-w-0">
                   <p className="truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-                    {client.name}
+                    {location.name}
                   </p>
                   <p className="mt-1 text-sm font-medium text-slate-600">
-                    {client.email}
+                    Client: <span className="text-slate-900">{location.client_name}</span>
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 sm:justify-end">
                   <button
                     type="button"
-                    onClick={() => openEditForm(client)}
+                    onClick={() => openEditForm(location)}
                     className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
-                    onClick={() => void onDelete(client.id)}
-                    disabled={deletingClientId === client.id}
+                    onClick={() => void onDelete(location.id)}
+                    disabled={deletingLocationId === location.id}
                     className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {deletingClientId === client.id ? "Deleting..." : "Delete"}
+                    {deletingLocationId === location.id ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>

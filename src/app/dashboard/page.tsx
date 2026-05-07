@@ -304,6 +304,12 @@ export default function DashboardPage() {
             >
               Clients
             </Link>
+            <Link
+              href="/locations"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+            >
+              Locations
+            </Link>
             <button
               type="button"
               onClick={onSignOut}
