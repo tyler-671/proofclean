@@ -570,16 +570,16 @@ export default function DashboardPage() {
                 >
                   <div className="min-w-0">
                     <p className="truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-                      {job.location}
-                    </p>
-                    <p className="mt-1.5 text-sm font-medium text-slate-600">
-                      Cleaner: <span className="text-slate-900">{job.cleaner}</span>
+                      {job.clientName ?? job.location}
                     </p>
                     {job.clientName ? (
                       <p className="mt-1 text-sm font-medium text-slate-600">
-                        Client: <span className="text-slate-900">{job.clientName}</span>
+                        📍 <span className="text-slate-900">{job.location}</span>
                       </p>
                     ) : null}
+                    <p className="mt-1.5 text-sm font-medium text-slate-600">
+                      Cleaner: <span className="text-slate-900">{job.cleaner}</span>
+                    </p>
                     <p className="mt-1 text-sm font-medium text-slate-600">
                       Job Date: <span className="text-slate-900">{job.jobDate ?? "Not set"}</span>
                     </p>
