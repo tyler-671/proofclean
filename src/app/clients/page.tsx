@@ -227,16 +227,16 @@ export default function ClientsPage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Link
               href="/dashboard"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
             >
               Dashboard
             </Link>
             <Link
               href="/clients"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:text-emerald-800"
+              className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700"
             >
               Clients
             </Link>
@@ -244,7 +244,7 @@ export default function ClientsPage() {
               type="button"
               onClick={onSignOut}
               disabled={!supabase || isSigningOut}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSigningOut ? "Signing out..." : "Sign out"}
             </button>
