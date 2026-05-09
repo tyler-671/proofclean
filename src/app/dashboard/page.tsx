@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -53,7 +54,6 @@ const getTodayDateInputValue = () => new Date().toISOString().split("T")[0];
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [jobs, setJobs] = useState<DashboardJob[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(true);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
@@ -197,13 +197,6 @@ export default function DashboardPage() {
     void fetchJobs();
   }, [fetchJobs]);
 
-  const onSignOut = async () => {
-    if (!supabase) return;
-    setIsSigningOut(true);
-    await supabase.auth.signOut();
-    router.replace("/");
-  };
-
   const onAddJobSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -325,59 +318,7 @@ export default function DashboardPage() {
   }
   return (
     <div className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3 transition hover:opacity-80">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-              >
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-            <div className="leading-tight">
-              <p className="text-base font-semibold tracking-tight text-slate-900">ProofClean</p>
-              <p className="text-xs font-medium text-slate-500">Dashboard</p>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-1">
-            <Link
-              href="/dashboard"
-              className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-700"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/clients"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-            >
-              Clients
-            </Link>
-            <Link
-              href="/locations"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-            >
-              Locations
-            </Link>
-            <button
-              type="button"
-              onClick={onSignOut}
-              disabled={!supabase || isSigningOut}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSigningOut ? "Signing out..." : "Sign out"}
-            </button>
-          </div>
-        </div>
-      </header>
+      <TopNav />
 
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
         <section className="mb-8">
