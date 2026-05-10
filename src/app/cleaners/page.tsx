@@ -191,6 +191,28 @@ it gives access to your assigned jobs.`;
 
   const onToggleActive = async (cleaner: Cleaner) => {
     if (!supabase) return;
+
+    if (cleaner.active) {
+      const { count, error: countError } = await supabase
+        .from("jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("cleaner_id", cleaner.id)
+        .neq("status", "complete");
+
+      if (countError) {
+        setLoadError(countError.message);
+        return;
+      }
+
+      const pendingCount = count ?? 0;
+      const confirmMessage =
+        pendingCount > 0
+          ? `${cleaner.name} has ${pendingCount} pending job(s). Deactivating will prevent them from accessing those jobs. Owner will need to reassign these jobs to another cleaner. Continue?`
+          : `Deactivate ${cleaner.name}? Their link will stop working immediately.`;
+
+      if (!window.confirm(confirmMessage)) return;
+    }
+
     setTogglingCleanerId(cleaner.id);
 
     const { error } = await supabase

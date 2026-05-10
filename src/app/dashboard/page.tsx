@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { Trash2, UserCog } from "lucide-react";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,10 +16,13 @@ const supabase =
 type JobStatus = "Complete" | "In progress" | "Pending";
 type DbJobStatus = "pending" | "in_progress" | "complete";
 
+type JobCleanerJoin = { id: string; name: string; active: boolean };
+
 type JobRow = {
   id: string;
   location_name: string;
   location_id: string | null;
+  cleaner_id: string | null;
   cleaner_name: string;
   status: DbJobStatus;
   job_date: string | null;
@@ -26,6 +30,7 @@ type JobRow = {
     | { name: string; clients: { name: string } | { name: string }[] | null }
     | { name: string; clients: { name: string } | { name: string }[] | null }[]
     | null;
+  cleaners: JobCleanerJoin | JobCleanerJoin[] | null;
 };
 
 type DashboardJob = {
@@ -34,6 +39,8 @@ type DashboardJob = {
   locationId: string | null;
   clientName: string | null;
   cleaner: string;
+  cleanerId: string | null;
+  assignedCleaner: JobCleanerJoin | null;
   status: JobStatus;
   jobDate: string | null;
 };
@@ -50,7 +57,27 @@ type LocationRow = {
   clients: { name: string } | { name: string }[] | null;
 };
 
+type CleanerOption = {
+  id: string;
+  name: string;
+};
+
 const getTodayDateInputValue = () => new Date().toISOString().split("T")[0];
+
+function normalizeJobCleanerJoin(
+  cleaners: JobRow["cleaners"],
+): JobCleanerJoin | null {
+  if (!cleaners) return null;
+  return Array.isArray(cleaners) ? (cleaners[0] ?? null) : cleaners;
+}
+
+function jobShowsInactiveCleanerWarning(job: DashboardJob): boolean {
+  if (job.status === "Complete") return false;
+  if (job.assignedCleaner?.active === false) return true;
+  const legacyOrphan =
+    (job.cleanerId === null || job.cleanerId === "") && job.cleaner.trim() !== "";
+  return legacyOrphan;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -60,14 +87,19 @@ export default function DashboardPage() {
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [cleaners, setCleaners] = useState<CleanerOption[]>([]);
   const [locationId, setLocationId] = useState("");
-  const [cleanerName, setCleanerName] = useState("");
+  const [cleanerId, setCleanerId] = useState("");
   const [jobStatus, setJobStatus] = useState<DbJobStatus>("pending");
   const [jobDate, setJobDate] = useState(getTodayDateInputValue);
   const [addJobError, setAddJobError] = useState<string | null>(null);
   const [isSubmittingJob, setIsSubmittingJob] = useState(false);
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
   const [openStatusMenuJobId, setOpenStatusMenuJobId] = useState<string | null>(null);
+  const [reassigningJobId, setReassigningJobId] = useState<string | null>(null);
+  const [reassignSelectedCleanerId, setReassignSelectedCleanerId] = useState("");
+  const [isSavingReassign, setIsSavingReassign] = useState(false);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const totalJobs = jobs.length;
@@ -145,9 +177,26 @@ export default function DashboardPage() {
 
     setLocations(mappedLocations);
 
+    const { data: cleanersData, error: cleanersError } = await supabase
+      .from("cleaners")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .order("name", { ascending: true });
+
+    if (cleanersError) {
+      setJobsError(cleanersError.message);
+      setIsLoadingJobs(false);
+      return;
+    }
+
+    setCleaners((cleanersData ?? []) as CleanerOption[]);
+
     const { data, error } = await supabase
       .from("jobs")
-      .select("id, location_name, location_id, cleaner_name, status, job_date, locations(name, clients(name))")
+      .select(
+        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, locations(name, clients(name)), cleaners(id, name, active)",
+      )
       .eq("user_id", user.id)
       .order("job_date", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
@@ -160,6 +209,7 @@ export default function DashboardPage() {
 
     const mappedJobs: DashboardJob[] = (data as JobRow[]).map((job) => {
       const jobLocation = Array.isArray(job.locations) ? (job.locations[0] ?? null) : job.locations;
+      const assignedCleaner = normalizeJobCleanerJoin(job.cleaners);
 
       return {
         id: job.id,
@@ -169,6 +219,8 @@ export default function DashboardPage() {
           ? (jobLocation?.clients[0]?.name ?? null)
           : (jobLocation?.clients?.name ?? null),
         cleaner: job.cleaner_name,
+        cleanerId: job.cleaner_id,
+        assignedCleaner,
         jobDate: job.job_date,
         status:
           job.status === "complete"
@@ -208,6 +260,10 @@ export default function DashboardPage() {
       setAddJobError("Please select a location.");
       return;
     }
+    if (!cleanerId) {
+      setAddJobError("Please select a cleaner.");
+      return;
+    }
 
     setIsSubmittingJob(true);
     setAddJobError(null);
@@ -223,11 +279,15 @@ export default function DashboardPage() {
       return;
     }
 
+    const selectedCleanerName =
+      cleaners.find((cleaner) => cleaner.id === cleanerId)?.name ?? "";
+
     const { error } = await supabase.from("jobs").insert({
       user_id: user.id,
       location_id: locationId,
       location_name: locations.find((location) => location.id === locationId)?.name ?? "",
-      cleaner_name: cleanerName,
+      cleaner_id: cleanerId,
+      cleaner_name: selectedCleanerName,
       status: jobStatus,
       job_date: jobDate,
     });
@@ -239,7 +299,7 @@ export default function DashboardPage() {
     }
 
     setLocationId("");
-    setCleanerName("");
+    setCleanerId("");
     setJobStatus("pending");
     setJobDate(getTodayDateInputValue());
     setIsAddJobOpen(false);
@@ -313,6 +373,81 @@ export default function DashboardPage() {
     setUpdatingJobId(null);
     setOpenStatusMenuJobId(null);
   };
+
+  const saveReassign = async () => {
+    if (!supabase || !reassigningJobId || !reassignSelectedCleanerId) return;
+
+    setIsSavingReassign(true);
+    setJobsError(null);
+
+    const selectedName =
+      cleaners.find((cleaner) => cleaner.id === reassignSelectedCleanerId)?.name ?? "";
+
+    const { error } = await supabase
+      .from("jobs")
+      .update({
+        cleaner_id: reassignSelectedCleanerId,
+        cleaner_name: selectedName,
+      })
+      .eq("id", reassigningJobId);
+
+    if (error) {
+      setJobsError(error.message);
+      setIsSavingReassign(false);
+      return;
+    }
+
+    setReassigningJobId(null);
+    setReassignSelectedCleanerId("");
+    setIsSavingReassign(false);
+    await fetchJobs();
+  };
+
+  const onDeleteJob = async (job: DashboardJob) => {
+    if (!window.confirm("Delete this job? This cannot be undone.")) return;
+
+    if (!supabase) {
+      setJobsError("Supabase environment variables are missing.");
+      return;
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setJobsError(userError?.message ?? "Could not verify authenticated user.");
+      return;
+    }
+
+    setDeletingJobId(job.id);
+    setJobsError(null);
+
+    const { error } = await supabase
+      .from("jobs")
+      .delete()
+      .eq("id", job.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      setJobsError(error.message);
+      setDeletingJobId(null);
+      return;
+    }
+
+    if (reassigningJobId === job.id) {
+      setReassigningJobId(null);
+      setReassignSelectedCleanerId("");
+    }
+    if (openStatusMenuJobId === job.id) {
+      setOpenStatusMenuJobId(null);
+    }
+
+    setDeletingJobId(null);
+    await fetchJobs();
+  };
+
   if (!isAuthChecked) {
     return <div className="min-h-screen bg-[#f7fafa]" />;
   }
@@ -399,21 +534,41 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <label
-                    htmlFor="cleanerName"
+                    htmlFor="cleanerId"
                     className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
                   >
-                    Cleaner Name
+                    Cleaner
                   </label>
-                  <input
-                    id="cleanerName"
-                    name="cleanerName"
-                    type="text"
+                  {cleaners.length === 0 ? (
+                    <p className="mt-1 mb-1.5 text-xs text-slate-500">
+                      You need to add a cleaner before creating a job. Go to the{" "}
+                      <Link
+                        href="/cleaners"
+                        className="text-emerald-600 underline hover:text-emerald-700"
+                      >
+                        Cleaners
+                      </Link>{" "}
+                      page to add one.
+                    </p>
+                  ) : null}
+                  <select
+                    id="cleanerId"
+                    name="cleanerId"
                     required
-                    value={cleanerName}
-                    onChange={(event) => setCleanerName(event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    placeholder="Alex Johnson"
-                  />
+                    disabled={cleaners.length === 0}
+                    value={cleanerId}
+                    onChange={(event) => setCleanerId(event.target.value)}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      Select a cleaner
+                    </option>
+                    {cleaners.map((cleaner) => (
+                      <option key={cleaner.id} value={cleaner.id}>
+                        {cleaner.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label
@@ -474,6 +629,7 @@ export default function DashboardPage() {
                     setAddJobError(null);
                     setJobDate(getTodayDateInputValue());
                     setLocationId("");
+                    setCleanerId("");
                   }}
                   className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
                 >
@@ -481,8 +637,10 @@ export default function DashboardPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingJob || locations.length === 0}
-                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  disabled={
+                    isSubmittingJob || locations.length === 0 || cleaners.length === 0
+                  }
+                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmittingJob ? "Adding..." : "Save Job"}
                 </button>
@@ -518,54 +676,177 @@ export default function DashboardPage() {
                         📍 <span className="text-slate-900">{job.location}</span>
                       </p>
                     ) : null}
-                    <p className="mt-1.5 text-sm font-medium text-slate-600">
-                      Cleaner: <span className="text-slate-900">{job.cleaner}</span>
-                    </p>
+                    <div className="mt-1.5 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-slate-600">
+                          Cleaner: <span className="text-slate-900">{job.cleaner}</span>
+                        </p>
+                        {job.status !== "Complete" && jobShowsInactiveCleanerWarning(job) ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
+                            Inactive
+                          </span>
+                        ) : null}
+                        {job.status !== "Complete" ? (
+                          <button
+                            type="button"
+                            aria-label="Reassign cleaner"
+                            onClick={() => {
+                              setOpenStatusMenuJobId(null);
+                              setReassigningJobId(job.id);
+                              setReassignSelectedCleanerId("");
+                            }}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                          >
+                            <UserCog className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            Reassign
+                          </button>
+                        ) : null}
+                      </div>
+                      {reassigningJobId === job.id ? (
+                        <div className="rounded-lg border border-slate-200 bg-white p-3">
+                          {cleaners.length === 0 ? (
+                            <>
+                              <p className="text-xs text-slate-500">
+                                You need to add a cleaner before reassigning. Go to the{" "}
+                                <Link
+                                  href="/cleaners"
+                                  className="text-emerald-600 underline hover:text-emerald-700"
+                                >
+                                  Cleaners
+                                </Link>{" "}
+                                page to add one.
+                              </p>
+                              <div className="mt-3 flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isSavingReassign}
+                                  onClick={() => {
+                                    setReassigningJobId(null);
+                                    setReassignSelectedCleanerId("");
+                                  }}
+                                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+                              <div className="min-w-[12rem] flex-1">
+                                <label
+                                  htmlFor={`reassign-cleaner-${job.id}`}
+                                  className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                                >
+                                  Reassign to:
+                                </label>
+                                <select
+                                  id={`reassign-cleaner-${job.id}`}
+                                  value={reassignSelectedCleanerId}
+                                  onChange={(event) =>
+                                    setReassignSelectedCleanerId(event.target.value)
+                                  }
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                >
+                                  <option value="" disabled>
+                                    Select a cleaner
+                                  </option>
+                                  {cleaners.map((cleaner) => (
+                                    <option key={cleaner.id} value={cleaner.id}>
+                                      {cleaner.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={isSavingReassign || !reassignSelectedCleanerId}
+                                  onClick={() => void saveReassign()}
+                                  className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {isSavingReassign ? "Saving..." : "Save"}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isSavingReassign}
+                                  onClick={() => {
+                                    setReassigningJobId(null);
+                                    setReassignSelectedCleanerId("");
+                                  }}
+                                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-sm font-medium text-slate-600">
                       Job Date: <span className="text-slate-900">{job.jobDate ?? "Not set"}</span>
                     </p>
                   </div>
 
-                  <div className="relative flex items-center justify-between gap-3 sm:justify-end">
+                  <div className="flex shrink-0 items-center justify-end gap-2">
+                    <div className="relative">
+                      <button
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded={openStatusMenuJobId === job.id}
+                        disabled={updatingJobId === job.id}
+                        onClick={() =>
+                          setOpenStatusMenuJobId((prev) => (prev === job.id ? null : job.id))
+                        }
+                        className={`min-w-[9rem] rounded-full border px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-70 ${getStatusBadgeStyles(
+                          toDbStatus(job.status),
+                        )}`}
+                      >
+                        <span className="flex items-center justify-between gap-2">
+                          <span>{toDbStatus(job.status)}</span>
+                          <span className="text-[10px]">{openStatusMenuJobId === job.id ? "▲" : "▼"}</span>
+                        </span>
+                      </button>
+                      {openStatusMenuJobId === job.id ? (
+                        <div
+                          role="menu"
+                          className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+                        >
+                          {statusOptions.map((statusOption) => {
+                            const isCurrentStatus = statusOption === toDbStatus(job.status);
+                            return (
+                              <button
+                                key={statusOption}
+                                type="button"
+                                role="menuitem"
+                                disabled={isCurrentStatus || updatingJobId === job.id}
+                                onClick={() => void onJobStatusChange(job.id, statusOption)}
+                                className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 focus:text-emerald-700 focus:outline-none disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400"
+                              >
+                                {statusOption}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                     <button
                       type="button"
-                      aria-haspopup="menu"
-                      aria-expanded={openStatusMenuJobId === job.id}
-                      disabled={updatingJobId === job.id}
-                      onClick={() =>
-                        setOpenStatusMenuJobId((prev) => (prev === job.id ? null : job.id))
-                      }
-                      className={`min-w-[9rem] rounded-full border px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-70 ${getStatusBadgeStyles(
-                        toDbStatus(job.status),
-                      )}`}
+                      aria-label="Delete job"
+                      disabled={deletingJobId === job.id}
+                      onClick={() => void onDeleteJob(job)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-md bg-transparent p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <span className="flex items-center justify-between gap-2">
-                        <span>{toDbStatus(job.status)}</span>
-                        <span className="text-[10px]">{openStatusMenuJobId === job.id ? "▲" : "▼"}</span>
-                      </span>
+                      <Trash2 className="h-4 w-4" aria-hidden />
                     </button>
-                    {openStatusMenuJobId === job.id ? (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-12 z-20 w-44 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
-                      >
-                        {statusOptions.map((statusOption) => {
-                          const isCurrentStatus = statusOption === toDbStatus(job.status);
-                          return (
-                            <button
-                              key={statusOption}
-                              type="button"
-                              role="menuitem"
-                              disabled={isCurrentStatus || updatingJobId === job.id}
-                              onClick={() => void onJobStatusChange(job.id, statusOption)}
-                              className="block w-full rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-700 focus:bg-emerald-50 focus:text-emerald-700 focus:outline-none disabled:cursor-default disabled:bg-slate-100 disabled:text-slate-400"
-                            >
-                              {statusOption}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
                   </div>
                 </div>
               ))
