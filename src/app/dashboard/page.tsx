@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { Trash2, UserCog } from "lucide-react";
+import { Plus, StickyNote, Trash2, UserCog } from "lucide-react";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,6 +31,7 @@ type JobRow = {
     | { name: string; clients: { name: string } | { name: string }[] | null }[]
     | null;
   cleaners: JobCleanerJoin | JobCleanerJoin[] | null;
+  notes: string | null;
 };
 
 type DashboardJob = {
@@ -43,6 +44,7 @@ type DashboardJob = {
   assignedCleaner: JobCleanerJoin | null;
   status: JobStatus;
   jobDate: string | null;
+  notes: string | null;
 };
 
 type LocationOption = {
@@ -92,6 +94,7 @@ export default function DashboardPage() {
   const [cleanerId, setCleanerId] = useState("");
   const [jobStatus, setJobStatus] = useState<DbJobStatus>("pending");
   const [jobDate, setJobDate] = useState(getTodayDateInputValue);
+  const [notes, setNotes] = useState("");
   const [addJobError, setAddJobError] = useState<string | null>(null);
   const [isSubmittingJob, setIsSubmittingJob] = useState(false);
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
@@ -100,6 +103,9 @@ export default function DashboardPage() {
   const [reassignSelectedCleanerId, setReassignSelectedCleanerId] = useState("");
   const [isSavingReassign, setIsSavingReassign] = useState(false);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+  const [editingNotesJobId, setEditingNotesJobId] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
+  const [savingNotesJobId, setSavingNotesJobId] = useState<string | null>(null);
 
   const stats = useMemo(() => {
     const totalJobs = jobs.length;
@@ -209,7 +215,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from("jobs")
       .select(
-        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, locations(name, clients(name)), cleaners(id, name, active)",
+        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, notes, locations(name, clients(name)), cleaners(id, name, active)",
       )
       .eq("user_id", user.id)
       .order("job_date", { ascending: true, nullsFirst: false })
@@ -236,6 +242,7 @@ export default function DashboardPage() {
         cleanerId: job.cleaner_id,
         assignedCleaner,
         jobDate: job.job_date,
+        notes: job.notes,
         status:
           job.status === "complete"
             ? "Complete"
@@ -304,6 +311,7 @@ export default function DashboardPage() {
       cleaner_name: selectedCleanerName,
       status: jobStatus,
       job_date: jobDate,
+      notes: notes.trim() || null,
     });
 
     if (error) {
@@ -316,6 +324,7 @@ export default function DashboardPage() {
     setCleanerId("");
     setJobStatus("pending");
     setJobDate(getTodayDateInputValue());
+    setNotes("");
     setIsAddJobOpen(false);
     setIsSubmittingJob(false);
     await fetchJobs();
@@ -460,6 +469,30 @@ export default function DashboardPage() {
 
     setDeletingJobId(null);
     await fetchJobs();
+  };
+
+  const onSaveJobNotes = async (jobId: string) => {
+    if (!supabase) {
+      setJobsError("Supabase environment variables are missing.");
+      return;
+    }
+
+    setSavingNotesJobId(jobId);
+    setJobsError(null);
+
+    const nextNotes = notesDraft.trim() || null;
+    const { error } = await supabase.from("jobs").update({ notes: nextNotes }).eq("id", jobId);
+
+    if (error) {
+      setJobsError(error.message);
+      setSavingNotesJobId(null);
+      return;
+    }
+
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, notes: nextNotes } : j)));
+    setEditingNotesJobId(null);
+    setNotesDraft("");
+    setSavingNotesJobId(null);
   };
 
   if (!isAuthChecked) {
@@ -622,6 +655,23 @@ export default function DashboardPage() {
                   </select>
                 </div>
               </div>
+              <div className="mt-4">
+                <label
+                  htmlFor="notes"
+                  className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Notes (optional)
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={3}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="e.g., Use side entrance, alarm code 4729. Skip boardroom."
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 resize-none"
+                />
+              </div>
               {addJobError ? (
                 <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                   Could not add job: {addJobError}
@@ -679,8 +729,9 @@ export default function DashboardPage() {
               jobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 sm:flex-row sm:items-center"
+                  className="rounded-2xl border border-slate-200 bg-white p-6"
                 >
+                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div className="min-w-0">
                     <p className="truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
                       {job.clientName ?? job.location}
@@ -862,6 +913,74 @@ export default function DashboardPage() {
                       <Trash2 className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
+                  </div>
+                  {editingNotesJobId === job.id ? (
+                    <div className="mt-3 w-full border-t border-slate-100 pt-3">
+                      <textarea
+                        rows={3}
+                        value={notesDraft}
+                        onChange={(event) => setNotesDraft(event.target.value)}
+                        placeholder="e.g., Use side entrance, alarm code 4729. Skip boardroom."
+                        autoFocus
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 resize-none"
+                      />
+                      <div className="mt-2 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={savingNotesJobId === job.id}
+                          onClick={() => {
+                            setEditingNotesJobId(null);
+                            setNotesDraft("");
+                          }}
+                          className="px-3 py-1.5 text-sm text-slate-500 transition-colors hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingNotesJobId === job.id}
+                          onClick={() => void onSaveJobNotes(job.id)}
+                          className="rounded-lg bg-emerald-500 px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {savingNotesJobId === job.id ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : job.notes?.trim() ? (
+                    <div className="mt-3 w-full border-t border-slate-100 pt-3">
+                      <div className="flex items-start gap-2">
+                        <StickyNote
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
+                          aria-hidden
+                        />
+                        <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
+                          <p className="whitespace-pre-wrap text-sm text-slate-600">{job.notes}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingNotesJobId(job.id);
+                              setNotesDraft(job.notes ?? "");
+                            }}
+                            className="shrink-0 text-xs font-medium text-emerald-700 transition-colors hover:text-emerald-800"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingNotesJobId(job.id);
+                        setNotesDraft(job.notes ?? "");
+                      }}
+                      className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-700"
+                    >
+                      <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      + Add notes
+                    </button>
+                  )}
                 </div>
               ))
             )}
