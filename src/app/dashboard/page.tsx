@@ -175,6 +175,20 @@ export default function DashboardPage() {
       }),
     ));
 
+    mappedLocations.sort((a, b) => {
+      const clientCompare = a.clientName.localeCompare(b.clientName);
+      if (clientCompare !== 0) return clientCompare;
+
+      // Word-starting locations come before number-starting ones
+      const aStartsWithLetter = /^[a-z]/i.test(a.name);
+      const bStartsWithLetter = /^[a-z]/i.test(b.name);
+      if (aStartsWithLetter && !bStartsWithLetter) return -1;
+      if (!aStartsWithLetter && bStartsWithLetter) return 1;
+
+      // Both same type: natural sort (so "5th" < "17th", and letters sort A-Z)
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
+    });
+
     setLocations(mappedLocations);
 
     const { data: cleanersData, error: cleanersError } = await supabase
