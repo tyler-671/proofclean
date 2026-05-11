@@ -65,12 +65,14 @@ export default function CrewPage() {
 
     let cancelled = false;
 
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
+    const load = async (isBackground = false) => {
+      if (!isBackground) {
+        setIsLoading(true);
+        setError(null);
+      }
 
       try {
-        const res = await fetch(`/api/crew/${encodeURIComponent(token)}`);
+        const res = await fetch(`/api/crew/${encodeURIComponent(token)}`, { cache: "no-store" });
         const data = (await res.json().catch(() => ({}))) as {
           error?: string;
           cleaner?: { name: string };
@@ -112,8 +114,24 @@ export default function CrewPage() {
     };
 
     void load();
+
+    // A — Auto-refresh every 60 seconds
+    const intervalId = window.setInterval(() => {
+      void load(true);
+    }, 60000);
+
+    // D — Refresh when the page becomes visible again (e.g., user unlocks phone)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void load(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [token]);
 
