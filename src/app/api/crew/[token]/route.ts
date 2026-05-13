@@ -110,10 +110,19 @@ export async function GET(
       };
     });
 
-    return NextResponse.json({
-      cleaner: { id: cleanerRow.id, name: cleanerRow.name },
-      jobs: mappedJobs,
-    });
+    return NextResponse.json(
+      {
+        cleaner: { id: cleanerRow.id, name: cleanerRow.name },
+        jobs: mappedJobs,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          "CDN-Cache-Control": "no-store",
+          "Vercel-CDN-Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (err) {
     console.error("Crew API unexpected error:", err);
     return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
