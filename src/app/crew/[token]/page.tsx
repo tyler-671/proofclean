@@ -55,6 +55,58 @@ export default function CrewPage() {
   const [error, setError] = useState<string | null>(null);
   const [cleanerName, setCleanerName] = useState<string | null>(null);
   const [jobs, setJobs] = useState<CrewJob[]>([]);
+  const [completingJobId, setCompletingJobId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
+    null,
+  );
+
+  const handleMarkComplete = async (job: CrewJob) => {
+    if (!token?.trim()) return;
+
+    const confirmed = window.confirm(
+      "Mark this job complete? An email will be sent to the client confirming the job is done.",
+    );
+    if (!confirmed) return;
+
+    setCompletingJobId(job.id);
+    try {
+      const res = await fetch(`/api/crew/${encodeURIComponent(token)}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: job.id }),
+        cache: "no-store",
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        setToast({
+          message: data?.error || "Couldn't mark complete. Try again.",
+          type: "error",
+        });
+        return;
+      }
+
+      setJobs((prev) => prev.filter((j) => j.id !== job.id));
+
+      setToast({
+        message: "Job marked complete. Client notified.",
+        type: "success",
+      });
+    } catch {
+      setToast({
+        message: "Couldn't mark complete. Try again.",
+        type: "error",
+      });
+    } finally {
+      setCompletingJobId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeoutId = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [toast]);
 
   useEffect(() => {
     if (!token?.trim()) {
@@ -157,6 +209,24 @@ export default function CrewPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
+      {toast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed left-1/2 top-4 z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+            toast.type === "success"
+              ? "bg-emerald-500 text-white"
+              : "bg-red-500 text-white"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
+          ) : (
+            <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
+          )}
+          {toast.message}
+        </div>
+      ) : null}
       <header className="bg-emerald-500 py-6 text-white">
         <div className="flex flex-col items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-lg bg-emerald-600 shadow-sm">
@@ -223,11 +293,12 @@ export default function CrewPage() {
                   </div>
                   <button
                     type="button"
-                    className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-600 active:bg-emerald-600"
-                    onClick={() => console.log("Mark complete clicked", job.id)}
+                    className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-600 active:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-emerald-500"
+                    onClick={() => void handleMarkComplete(job)}
+                    disabled={completingJobId === job.id}
                   >
                     <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
-                    Mark Complete
+                    {completingJobId === job.id ? "Completing..." : "Mark Complete"}
                   </button>
                 </div>
               </article>
