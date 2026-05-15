@@ -87,7 +87,6 @@ export async function GET(
       .from("jobs")
       .select("id, location_name, status, job_date, notes, locations(name, clients(name))")
       .eq("cleaner_id", cleanerRow.id)
-      .gte("job_date", today)
       .neq("status", "complete")
       .order("job_date", { ascending: true });
 
