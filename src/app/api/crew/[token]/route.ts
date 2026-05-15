@@ -81,7 +81,7 @@ export async function GET(
       );
     }
 
-    const today = new Date().toISOString().split("T")[0];
+  
 
     const { data: jobsData, error: jobsError } = await supabase
       .from("jobs")
