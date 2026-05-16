@@ -93,6 +93,9 @@ export async function GET(
         cleanerId: cleanerRow.id,
         jobsData,
         jobsError,
+        keyLength: serviceRoleKey?.length,
+        keyStart: serviceRoleKey?.slice(0, 20),
+        keyRole: serviceRoleKey ? JSON.parse(Buffer.from(serviceRoleKey.split('.')[1], 'base64').toString()).role : null,
       });
 
     if (jobsError) {
