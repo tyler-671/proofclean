@@ -55,7 +55,11 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      global: {
+        fetch: (url, options = {}) => fetch(url, { ...options, cache: "no-store" }),
+      },
+    });
 
     const { data: cleaner, error: cleanerError } = await supabase
       .from("cleaners")
