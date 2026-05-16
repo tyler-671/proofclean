@@ -89,6 +89,11 @@ export async function GET(
       .eq("cleaner_id", cleanerRow.id)
       .neq("status", "complete")
       .order("job_date", { ascending: true });
+      console.log("DEBUG jobs query:", {
+        cleanerId: cleanerRow.id,
+        jobsData,
+        jobsError,
+      });
 
     if (jobsError) {
       console.error("Crew API jobs query error:", jobsError);
