@@ -93,14 +93,7 @@ export async function GET(
       .eq("cleaner_id", cleanerRow.id)
       .neq("status", "complete")
       .order("job_date", { ascending: true });
-      console.log("DEBUG jobs query:", {
-        cleanerId: cleanerRow.id,
-        jobsData,
-        jobsError,
-        keyLength: serviceRoleKey?.length,
-        keyStart: serviceRoleKey?.slice(0, 20),
-        keyRole: serviceRoleKey ? JSON.parse(Buffer.from(serviceRoleKey.split('.')[1], 'base64').toString()).role : null,
-      });
+      
 
     if (jobsError) {
       console.error("Crew API jobs query error:", jobsError);
