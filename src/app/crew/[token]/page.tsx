@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   AlertTriangle,
@@ -23,10 +23,20 @@ type CrewJob = {
   notes: string | null;
 };
 
-function formatJobDate(isoDate: string | null): string {
-  if (!isoDate) return "Date not set";
-  const parts = isoDate.split("-").map(Number);
-  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return isoDate;
+function getTodayYmd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysToYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function formatYmdLabel(ymd: string): string {
+  const parts = ymd.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return ymd;
   const [y, m, d] = parts;
   const local = new Date(y, m - 1, d);
   return new Intl.DateTimeFormat("en-US", {
@@ -34,6 +44,97 @@ function formatJobDate(isoDate: string | null): string {
     month: "short",
     day: "numeric",
   }).format(local);
+}
+
+function formatJobDate(isoDate: string | null): string {
+  if (!isoDate) return "Date not set";
+  return formatYmdLabel(isoDate);
+}
+
+type JobDateGroup = {
+  key: string;
+  label: string;
+  headerClassName: string;
+  jobs: CrewJob[];
+};
+
+function groupJobsByDate(jobs: CrewJob[]): JobDateGroup[] {
+  const today = getTodayYmd();
+  const tomorrow = addDaysToYmd(today, 1);
+
+  const overdue: CrewJob[] = [];
+  const todayJobs: CrewJob[] = [];
+  const tomorrowJobs: CrewJob[] = [];
+  const byDate = new Map<string, CrewJob[]>();
+  const unscheduled: CrewJob[] = [];
+
+  for (const job of jobs) {
+    const date = job.jobDate;
+    if (!date) {
+      unscheduled.push(job);
+      continue;
+    }
+    if (date < today) {
+      overdue.push(job);
+    } else if (date === today) {
+      todayJobs.push(job);
+    } else if (date === tomorrow) {
+      tomorrowJobs.push(job);
+    } else {
+      const bucket = byDate.get(date);
+      if (bucket) bucket.push(job);
+      else byDate.set(date, [job]);
+    }
+  }
+
+  const groups: JobDateGroup[] = [];
+
+  if (overdue.length > 0) {
+    groups.push({
+      key: "overdue",
+      label: "Overdue",
+      headerClassName: "text-red-600",
+      jobs: overdue,
+    });
+  }
+  if (todayJobs.length > 0) {
+    groups.push({
+      key: "today",
+      label: "Today",
+      headerClassName: "text-gray-700",
+      jobs: todayJobs,
+    });
+  }
+  if (tomorrowJobs.length > 0) {
+    groups.push({
+      key: "tomorrow",
+      label: "Tomorrow",
+      headerClassName: "text-gray-700",
+      jobs: tomorrowJobs,
+    });
+  }
+
+  for (const date of Array.from(byDate.keys()).sort()) {
+    const dateJobs = byDate.get(date);
+    if (!dateJobs?.length) continue;
+    groups.push({
+      key: date,
+      label: formatYmdLabel(date),
+      headerClassName: "text-gray-700",
+      jobs: dateJobs,
+    });
+  }
+
+  if (unscheduled.length > 0) {
+    groups.push({
+      key: "unscheduled",
+      label: "Unscheduled",
+      headerClassName: "text-gray-500",
+      jobs: unscheduled,
+    });
+  }
+
+  return groups;
 }
 
 function statusPillClass(status: string): string {
@@ -116,6 +217,8 @@ export default function CrewPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
+
+  const jobGroups = useMemo(() => groupJobsByDate(jobs), [jobs]);
 
   const revokePhotos = useCallback((items: PendingPhoto[]) => {
     for (const p of items) {
@@ -386,8 +489,16 @@ export default function CrewPage() {
 
         <div className="mx-auto max-w-md px-4 pb-8">
         {jobs.length > 0 ? (
-          <div className="space-y-3">
-            {jobs.map((job) => (
+          <div>
+            {jobGroups.map((group, groupIndex) => (
+              <section key={group.key}>
+                <h2
+                  className={`mb-2 text-sm font-semibold uppercase tracking-wide ${groupIndex === 0 ? "mt-0" : "mt-6"} ${group.headerClassName}`}
+                >
+                  {group.label}
+                </h2>
+                <div className="space-y-3">
+                  {group.jobs.map((job) => (
               <article
                 key={job.id}
                 className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -432,6 +543,9 @@ export default function CrewPage() {
                   </button>
                 </div>
               </article>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         ) : (

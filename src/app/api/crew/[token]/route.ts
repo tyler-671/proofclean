@@ -37,6 +37,24 @@ function normalizeLocation(
   return { locationName, clientName };
 }
 
+function getUtcTodayYmd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysToYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function isJobInCrewWindow(jobDate: string | null, today: string, endDate: string): boolean {
+  if (jobDate === null) return true;
+  if (jobDate < today) return true;
+  if (jobDate >= today && jobDate <= endDate) return true;
+  return false;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: { token: string } },
@@ -101,8 +119,14 @@ export async function GET(
     }
 
     const jobs = (jobsData ?? []) as JobQueryRow[];
+    const today = getUtcTodayYmd();
+    const endDate = addDaysToYmd(today, 7);
 
-    const mappedJobs = jobs.map((job) => {
+    const filteredJobs = jobs.filter((job) =>
+      isJobInCrewWindow(job.job_date, today, endDate),
+    );
+
+    const mappedJobs = filteredJobs.map((job) => {
       const { locationName, clientName } = normalizeLocation(job.location_name, job.locations);
       return {
         id: job.id,
