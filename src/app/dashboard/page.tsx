@@ -304,6 +304,7 @@ export default function DashboardPage() {
     let cancelled = false;
 
     const refreshInBackground = () => {
+      console.log("AUTO-REFRESH tick", { skip: skipBackgroundRefreshRef.current, cancelled });
       if (cancelled || skipBackgroundRefreshRef.current) return;
       void fetchJobs(true);
     };
