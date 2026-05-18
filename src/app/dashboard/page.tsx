@@ -126,8 +126,8 @@ export default function DashboardPage() {
     deletingJobId !== null;
 
   const stats = useMemo(() => {
-    const totalJobs = jobs.length;
     const todayDate = new Date().toISOString().slice(0, 10);
+    const locationsTonight = jobs.filter((job) => job.jobDate === todayDate).length;
     const cleanersActiveToday = new Set(
       jobs
         .filter(
@@ -138,13 +138,15 @@ export default function DashboardPage() {
         )
         .map((job) => job.cleanerId),
     ).size;
-    const completeJobs = jobs.filter((job) => job.status === "Complete").length;
+    const completeJobsToday = jobs.filter(
+      (job) => job.jobDate === todayDate && job.status === "Complete",
+    ).length;
 
     return [
-      { label: "Locations tonight", value: String(totalJobs) },
+      { label: "Locations tonight", value: String(locationsTonight) },
       { label: "Cleaners active", value: String(cleanersActiveToday) },
-      { label: "Jobs complete", value: String(completeJobs) },
-      { label: "Clients notified", value: String(completeJobs) },
+      { label: "Jobs complete", value: String(completeJobsToday) },
+      { label: "Clients notified", value: String(completeJobsToday) },
     ];
   }, [jobs]);
 
