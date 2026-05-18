@@ -11,11 +11,24 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabase =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
+type ClientRow = {
+  id: string;
+  name: string;
+  email: string;
+  locations: { id: string }[] | null;
+};
+
 type Client = {
   id: string;
   name: string;
   email: string;
+  locationCount: number;
 };
+
+function locationCountLabel(count: number): string {
+  if (count === 0) return "No locations yet";
+  return count === 1 ? "1 location" : `${count} locations`;
+}
 
 export default function ClientsPage() {
   const router = useRouter();
@@ -74,7 +87,7 @@ export default function ClientsPage() {
 
     const { data, error } = await supabase
       .from("clients")
-      .select("id, name, email")
+      .select("id, name, email, locations(id)")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
 
@@ -84,7 +97,14 @@ export default function ClientsPage() {
       return;
     }
 
-    setClients((data as Client[]) ?? []);
+    const mappedClients: Client[] = ((data as ClientRow[]) ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      locationCount: Array.isArray(row.locations) ? row.locations.length : 0,
+    }));
+
+    setClients(mappedClients);
     setIsLoading(false);
   }, [router, isAuthChecked]);
 
@@ -321,7 +341,16 @@ export default function ClientsPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 sm:justify-end">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <span
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                      client.locationCount >= 1
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {locationCountLabel(client.locationCount)}
+                  </span>
                   <button
                     type="button"
                     onClick={() => openEditForm(client)}
