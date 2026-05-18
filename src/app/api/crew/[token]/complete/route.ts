@@ -118,6 +118,32 @@ export async function POST(
       return NextResponse.json({ error: "Something went wrong." }, { status: 500 });
     }
 
+    const photoUrls: string[] = [];
+    const { data: jobPhotos, error: photosError } = await supabase
+      .from("job_photos")
+      .select("storage_path")
+      .eq("job_id", jobId)
+      .order("created_at", { ascending: true });
+
+    if (photosError) {
+      console.error("Crew complete API job_photos fetch error:", photosError);
+    } else if (jobPhotos?.length) {
+      for (const row of jobPhotos) {
+        const path = row.storage_path as string;
+        if (!path) continue;
+        const { data: signed, error: signError } = await supabase.storage
+          .from("job-photos")
+          .createSignedUrl(path, 3600);
+        if (signError) {
+          console.error("Crew complete API signed URL error:", signError);
+          continue;
+        }
+        if (signed?.signedUrl) {
+          photoUrls.push(signed.signedUrl);
+        }
+      }
+    }
+
     const origin = req.nextUrl.origin;
     const notifyResponse = await fetch(`${origin}/api/notify`, {
       method: "POST",
@@ -126,6 +152,7 @@ export async function POST(
         location_name: jobRow.location_name,
         cleaner_name: jobRow.cleaner_name,
         location_id: jobRow.location_id,
+        ...(photoUrls.length > 0 ? { photoUrls } : {}),
       }),
     });
 

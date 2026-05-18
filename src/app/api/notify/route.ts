@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
@@ -6,6 +8,12 @@ type NotifyPayload = {
   location_name?: string;
   cleaner_name?: string;
   location_id?: string;
+  photoUrls?: string[];
+};
+
+type EmailAttachment = {
+  filename: string;
+  content: string;
 };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -16,7 +24,11 @@ const getSupabaseServiceRoleClient = () => {
     return null;
   }
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey);
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+    global: {
+      fetch: (url, options = {}) => fetch(url, { ...options, cache: "no-store" }),
+    },
+  });
 };
 
 export async function POST(request: Request) {
@@ -39,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as NotifyPayload;
-    const { location_name, cleaner_name, location_id } = body;
+    const { location_name, cleaner_name, location_id, photoUrls } = body;
 
     if (!location_name || !cleaner_name || !location_id) {
       return NextResponse.json(
@@ -88,12 +100,43 @@ export async function POST(request: Request) {
       );
     }
 
+    const attachments: EmailAttachment[] = [];
+    const validPhotoUrls = Array.isArray(photoUrls)
+      ? photoUrls.filter((u): u is string => typeof u === "string" && u.length > 0)
+      : [];
+
+    if (validPhotoUrls.length > 0) {
+      for (let i = 0; i < validPhotoUrls.length; i++) {
+        try {
+          const imageRes = await fetch(validPhotoUrls[i], { cache: "no-store" });
+          if (!imageRes.ok) {
+            console.error(`Failed to fetch photo ${i + 1}:`, imageRes.status);
+            continue;
+          }
+          const buffer = Buffer.from(await imageRes.arrayBuffer());
+          attachments.push({
+            filename: `photo-${i + 1}.jpg`,
+            content: buffer.toString("base64"),
+          });
+        } catch (fetchErr) {
+          console.error(`Error fetching photo ${i + 1}:`, fetchErr);
+        }
+      }
+    }
+
+    const photoCount = attachments.length;
+    const photoLine =
+      photoCount > 0
+        ? ` ${photoCount} photo${photoCount === 1 ? "" : "s"} attached.`
+        : "";
+
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: "ProofClean <notifications@proofclean.ca>",
       to: client.email,
       subject: "Your office has been cleaned ✓",
-      text: `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ProofClean.`,
+      text: `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ProofClean.${photoLine}`,
+      ...(attachments.length > 0 ? { attachments } : {}),
     });
 
     if (error) {

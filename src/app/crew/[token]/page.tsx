@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import {
   AlertTriangle,
   Calendar,
+  Camera,
   Check,
   CheckCircle2,
+  Loader2,
   Lock,
   StickyNote,
+  X,
 } from "lucide-react";
 
 type CrewJob = {
@@ -46,6 +49,56 @@ function statusLabel(status: string): string {
   return status;
 }
 
+const MAX_PHOTOS = 5;
+
+type PendingPhoto = {
+  id: string;
+  file: Blob;
+  previewUrl: string;
+};
+
+function compressImage(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const maxWidth = 1600;
+      let { width, height } = img;
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas not supported"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Compression failed"));
+        },
+        "image/jpeg",
+        0.7,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Failed to load image"));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 export default function CrewPage() {
   const params = useParams();
   const rawToken = params?.token;
@@ -56,24 +109,92 @@ export default function CrewPage() {
   const [cleanerName, setCleanerName] = useState<string | null>(null);
   const [jobs, setJobs] = useState<CrewJob[]>([]);
   const [completingJobId, setCompletingJobId] = useState<string | null>(null);
+  const [modalJob, setModalJob] = useState<CrewJob | null>(null);
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
 
-  const handleMarkComplete = async (job: CrewJob) => {
+  const revokePhotos = useCallback((items: PendingPhoto[]) => {
+    for (const p of items) {
+      URL.revokeObjectURL(p.previewUrl);
+    }
+  }, []);
+
+  const closeModal = useCallback(() => {
+    if (isSubmitting) return;
+    setPhotos((prev) => {
+      revokePhotos(prev);
+      return [];
+    });
+    setModalJob(null);
+  }, [isSubmitting, revokePhotos]);
+
+  const openCompleteModal = (job: CrewJob) => {
     if (!token?.trim()) return;
+    setPhotos((prev) => {
+      revokePhotos(prev);
+      return [];
+    });
+    setModalJob(job);
+  };
 
-    const confirmed = window.confirm(
-      "Mark this job complete? An email will be sent to the client confirming the job is done.",
-    );
-    if (!confirmed) return;
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || photos.length >= MAX_PHOTOS) return;
 
-    setCompletingJobId(job.id);
     try {
+      const compressed = await compressImage(file);
+      const id = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(compressed);
+      setPhotos((prev) => [...prev, { id, file: compressed, previewUrl }]);
+    } catch {
+      setToast({ message: "Couldn't process photo. Try again.", type: "error" });
+    }
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const removed = prev.find((p) => p.id === id);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  };
+
+  const handleCompleteJob = async () => {
+    if (!token?.trim() || !modalJob) return;
+
+    setIsSubmitting(true);
+    setCompletingJobId(modalJob.id);
+
+    try {
+      for (const photo of photos) {
+        const formData = new FormData();
+        formData.append("jobId", modalJob.id);
+        formData.append("photo", photo.file, "photo.jpg");
+
+        const uploadRes = await fetch(
+          `/api/crew/${encodeURIComponent(token)}/photos`,
+          { method: "POST", body: formData, cache: "no-store" },
+        );
+
+        if (!uploadRes.ok) {
+          const data = (await uploadRes.json().catch(() => ({}))) as { error?: string };
+          setToast({
+            message: data?.error || "Couldn't upload photo. Try again.",
+            type: "error",
+          });
+          return;
+        }
+      }
+
       const res = await fetch(`/api/crew/${encodeURIComponent(token)}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: job.id }),
+        body: JSON.stringify({ jobId: modalJob.id }),
         cache: "no-store",
       });
 
@@ -86,18 +207,21 @@ export default function CrewPage() {
         return;
       }
 
-      setJobs((prev) => prev.filter((j) => j.id !== job.id));
-
-      setToast({
-        message: "Job marked complete. Client notified.",
-        type: "success",
+      const completedId = modalJob.id;
+      setJobs((prev) => prev.filter((j) => j.id !== completedId));
+      setPhotos((prev) => {
+        revokePhotos(prev);
+        return [];
       });
+      setModalJob(null);
+      setToast({ message: "Job complete!", type: "success" });
     } catch {
       setToast({
         message: "Couldn't mark complete. Try again.",
         type: "error",
       });
     } finally {
+      setIsSubmitting(false);
       setCompletingJobId(null);
     }
   };
@@ -294,7 +418,7 @@ export default function CrewPage() {
                   <button
                     type="button"
                     className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 py-3 text-base font-semibold text-white transition-colors hover:bg-emerald-600 active:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-emerald-500"
-                    onClick={() => void handleMarkComplete(job)}
+                    onClick={() => openCompleteModal(job)}
                     disabled={completingJobId === job.id}
                   >
                     <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
@@ -313,6 +437,104 @@ export default function CrewPage() {
           </div>
         )}
       </div>
+
+      {modalJob ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="complete-modal-title"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="complete-modal-title" className="text-xl font-semibold text-slate-900">
+              Complete this job?
+            </h2>
+
+            <div className="mt-5">
+              <p className="text-sm font-medium text-slate-700">Add photos (optional)</p>
+              <div className="mt-3 flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  onChange={(e) => void handlePhotoSelect(e)}
+                  disabled={photos.length >= MAX_PHOTOS || isSubmitting}
+                />
+                <button
+                  type="button"
+                  className="flex min-h-[88px] flex-1 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 px-4 py-4 text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-emerald-50"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={photos.length >= MAX_PHOTOS || isSubmitting}
+                >
+                  <Camera className="h-8 w-8" aria-hidden />
+                  <span className="text-base font-semibold">
+                    {photos.length >= MAX_PHOTOS ? "Max 5 photos" : "Take photo"}
+                  </span>
+                </button>
+                <span className="text-sm font-medium tabular-nums text-slate-600">
+                  {photos.length}/{MAX_PHOTOS}
+                </span>
+              </div>
+
+              {photos.length > 0 ? (
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative aspect-square overflow-hidden rounded-lg">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.previewUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-50"
+                        onClick={() => removePhoto(photo.id)}
+                        disabled={isSubmitting}
+                        aria-label="Remove photo"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                className="flex min-h-[44px] flex-1 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-base font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={closeModal}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 text-base font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void handleCompleteJob()}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                    Completing...
+                  </>
+                ) : (
+                  "Complete Job"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
