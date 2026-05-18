@@ -337,7 +337,7 @@ export default function CrewPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`fixed left-1/2 top-4 z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+          className={`fixed left-1/2 top-[18.25rem] z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
             toast.type === "success"
               ? "bg-emerald-500 text-white"
               : "bg-red-500 text-white"
