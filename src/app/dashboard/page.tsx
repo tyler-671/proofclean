@@ -11,7 +11,14 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          fetch: (url, options = {}) =>
+            fetch(url, { ...options, cache: "no-store" }),
+        },
+      })
+    : null;
 
 type JobStatus = "Complete" | "In progress" | "Pending";
 type DbJobStatus = "pending" | "in_progress" | "complete";
@@ -304,7 +311,6 @@ export default function DashboardPage() {
     let cancelled = false;
 
     const refreshInBackground = () => {
-      console.log("AUTO-REFRESH tick", { skip: skipBackgroundRefreshRef.current, cancelled });
       if (cancelled || skipBackgroundRefreshRef.current) return;
       void fetchJobs(true);
     };
