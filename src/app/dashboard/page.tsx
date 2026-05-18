@@ -127,7 +127,17 @@ export default function DashboardPage() {
 
   const stats = useMemo(() => {
     const totalJobs = jobs.length;
-    const inProgressJobs = jobs.filter((job) => job.status === "In progress").length;
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const cleanersActiveToday = new Set(
+      jobs
+        .filter(
+          (job) =>
+            job.jobDate === todayDate &&
+            (job.status === "Pending" || job.status === "In progress") &&
+            job.cleanerId,
+        )
+        .map((job) => job.cleanerId),
+    ).size;
     const completeJobs = jobs.filter((job) => job.status === "Complete").length;
 
     return [
