@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -107,6 +107,17 @@ export default function DashboardPage() {
   const [notesDraft, setNotesDraft] = useState("");
   const [savingNotesJobId, setSavingNotesJobId] = useState<string | null>(null);
 
+  const skipBackgroundRefreshRef = useRef(false);
+  skipBackgroundRefreshRef.current =
+    isAddJobOpen ||
+    editingNotesJobId !== null ||
+    reassigningJobId !== null ||
+    isSubmittingJob ||
+    isSavingReassign ||
+    savingNotesJobId !== null ||
+    updatingJobId !== null ||
+    deletingJobId !== null;
+
   const stats = useMemo(() => {
     const totalJobs = jobs.length;
     const inProgressJobs = jobs.filter((job) => job.status === "In progress").length;
@@ -120,43 +131,52 @@ export default function DashboardPage() {
     ];
   }, [jobs]);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (isBackground = false) => {
     if (!supabase) {
-      setJobsError("Supabase environment variables are missing.");
-      setIsLoadingJobs(false);
+      if (!isBackground) {
+        setJobsError("Supabase environment variables are missing.");
+        setIsLoadingJobs(false);
+      }
       return;
     }
 
-    setIsLoadingJobs(true);
-    setJobsError(null);
+    if (!isBackground) {
+      setIsLoadingJobs(true);
+      setJobsError(null);
+    }
 
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (!session?.user) {
-      router.replace("/login");
+      if (!isBackground) {
+        router.replace("/login");
+      }
       return;
     }
 
     const user = session.user;
     if (!isAuthChecked) setIsAuthChecked(true);
-    const { data: subscription, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("status")
-      .eq("user_id", user.id)
-      .maybeSingle();
 
-    if (subscriptionError) {
-      setJobsError(subscriptionError.message);
-      setIsLoadingJobs(false);
-      return;
-    }
+    if (!isBackground) {
+      const { data: subscription, error: subscriptionError } = await supabase
+        .from("subscriptions")
+        .select("status")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-    if (subscription?.status !== "active") {
-      router.replace("/pricing");
-      setIsLoadingJobs(false);
-      return;
+      if (subscriptionError) {
+        setJobsError(subscriptionError.message);
+        setIsLoadingJobs(false);
+        return;
+      }
+
+      if (subscription?.status !== "active") {
+        router.replace("/pricing");
+        setIsLoadingJobs(false);
+        return;
+      }
     }
 
     const { data: locationsData, error: locationsError } = await supabase
@@ -166,8 +186,10 @@ export default function DashboardPage() {
       .order("name", { ascending: true });
 
     if (locationsError) {
-      setJobsError(locationsError.message);
-      setIsLoadingJobs(false);
+      if (!isBackground) {
+        setJobsError(locationsError.message);
+        setIsLoadingJobs(false);
+      }
       return;
     }
 
@@ -205,8 +227,10 @@ export default function DashboardPage() {
       .order("name", { ascending: true });
 
     if (cleanersError) {
-      setJobsError(cleanersError.message);
-      setIsLoadingJobs(false);
+      if (!isBackground) {
+        setJobsError(cleanersError.message);
+        setIsLoadingJobs(false);
+      }
       return;
     }
 
@@ -222,8 +246,10 @@ export default function DashboardPage() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setJobsError(error.message);
-      setIsLoadingJobs(false);
+      if (!isBackground) {
+        setJobsError(error.message);
+        setIsLoadingJobs(false);
+      }
       return;
     }
 
@@ -263,12 +289,40 @@ export default function DashboardPage() {
     });
 
     setJobs(sortedJobs);
-    setIsLoadingJobs(false);
-  }, [router]);
+    if (!isBackground) {
+      setIsLoadingJobs(false);
+    }
+  }, [router, isAuthChecked]);
 
   useEffect(() => {
     void fetchJobs();
   }, [fetchJobs]);
+
+  useEffect(() => {
+    if (!isAuthChecked) return;
+
+    let cancelled = false;
+
+    const refreshInBackground = () => {
+      if (cancelled || skipBackgroundRefreshRef.current) return;
+      void fetchJobs(true);
+    };
+
+    const intervalId = window.setInterval(refreshInBackground, 60000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshInBackground();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isAuthChecked, fetchJobs]);
 
   const onAddJobSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
