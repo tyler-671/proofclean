@@ -333,24 +333,6 @@ export default function CrewPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
-      {toast ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className={`fixed left-1/2 top-[18.25rem] z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-            toast.type === "success"
-              ? "bg-emerald-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
-          ) : (
-            <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
-          )}
-          {toast.message}
-        </div>
-      ) : null}
       <header className="bg-emerald-500 py-6 text-white">
         <div className="flex flex-col items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-lg bg-emerald-600 shadow-sm">
@@ -360,7 +342,31 @@ export default function CrewPage() {
         </div>
       </header>
 
-      <section className="mx-auto max-w-md px-4 pt-6 pb-2">
+      <main className="relative">
+        {toast ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="pointer-events-none absolute inset-x-0 top-4 z-50 flex justify-center px-4"
+          >
+            <div
+              className={`flex w-full max-w-[min(100%,28rem)] items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+                toast.type === "success"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-red-500 text-white"
+              }`}
+            >
+              {toast.type === "success" ? (
+                <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
+              ) : (
+                <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
+              )}
+              {toast.message}
+            </div>
+          </div>
+        ) : null}
+
+        <section className="mx-auto max-w-md px-4 pt-6 pb-2">
         <h1 className="text-2xl font-semibold text-slate-900">
           Hi{cleanerName ? ` ${cleanerName}` : ""}
         </h1>
@@ -369,16 +375,16 @@ export default function CrewPage() {
             ? "Here are your upcoming jobs."
             : "No jobs assigned to you right now."}
         </p>
-      </section>
+        </section>
 
-      <div className="mx-auto my-3 flex max-w-[calc(28rem-2rem)] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <div className="mx-auto my-3 flex max-w-[calc(28rem-2rem)] items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
         <Lock className="h-4 w-4 shrink-0 text-amber-700" aria-hidden />
         <p className="text-sm text-amber-800">
           This is your personal link. Don&apos;t share it with anyone.
         </p>
-      </div>
+        </div>
 
-      <div className="mx-auto max-w-md px-4 pb-8">
+        <div className="mx-auto max-w-md px-4 pb-8">
         {jobs.length > 0 ? (
           <div className="space-y-3">
             {jobs.map((job) => (
@@ -436,7 +442,8 @@ export default function CrewPage() {
             </p>
           </div>
         )}
-      </div>
+        </div>
+      </main>
 
       {modalJob ? (
         <div
