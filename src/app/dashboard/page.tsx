@@ -142,7 +142,7 @@ export default function DashboardPage() {
 
     return [
       { label: "Locations tonight", value: String(totalJobs) },
-      { label: "Cleaners active", value: String(inProgressJobs) },
+      { label: "Cleaners active", value: String(cleanersActiveToday) },
       { label: "Jobs complete", value: String(completeJobs) },
       { label: "Clients notified", value: String(completeJobs) },
     ];
