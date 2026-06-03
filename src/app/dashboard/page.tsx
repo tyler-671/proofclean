@@ -33,6 +33,7 @@ type JobRow = {
   cleaner_name: string;
   status: DbJobStatus;
   job_date: string | null;
+  completed_at: string | null;
   locations:
     | { name: string; clients: { name: string } | { name: string }[] | null }
     | { name: string; clients: { name: string } | { name: string }[] | null }[]
@@ -51,6 +52,7 @@ type DashboardJob = {
   assignedCleaner: JobCleanerJoin | null;
   status: JobStatus;
   jobDate: string | null;
+  completedAt: string | null;
   notes: string | null;
 };
 
@@ -78,6 +80,17 @@ function normalizeJobCleanerJoin(
 ): JobCleanerJoin | null {
   if (!cleaners) return null;
   return Array.isArray(cleaners) ? (cleaners[0] ?? null) : cleaners;
+}
+
+function formatCompletedAt(completedAt: string | null): string {
+  if (!completedAt) return "Completed: (time unknown)";
+  return `Completed: ${new Date(completedAt).toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })}`;
 }
 
 function jobShowsInactiveCleanerWarning(job: DashboardJob): boolean {
@@ -258,7 +271,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from("jobs")
       .select(
-        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, notes, locations(name, clients(name)), cleaners(id, name, active)",
+        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, completed_at, notes, locations(name, clients(name)), cleaners(id, name, active)",
       )
       .eq("user_id", user.id)
       .order("job_date", { ascending: true, nullsFirst: false })
@@ -287,6 +300,7 @@ export default function DashboardPage() {
         cleanerId: job.cleaner_id,
         assignedCleaner,
         jobDate: job.job_date,
+        completedAt: job.completed_at,
         notes: job.notes,
         status:
           job.status === "complete"
@@ -303,6 +317,12 @@ export default function DashboardPage() {
 
       if (aIsComplete && !bIsComplete) return 1;
       if (!aIsComplete && bIsComplete) return -1;
+
+      if (aIsComplete && bIsComplete) {
+        const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+        const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+        return bTime - aTime;
+      }
 
       return 0;
     });
@@ -932,6 +952,11 @@ export default function DashboardPage() {
                     <p className="mt-1 text-sm font-medium text-slate-600">
                       Job Date: <span className="text-slate-900">{job.jobDate ?? "Not set"}</span>
                     </p>
+                    {job.status === "Complete" ? (
+                      <p className="mt-1 text-sm font-medium text-slate-600">
+                        {formatCompletedAt(job.completedAt)}
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="flex shrink-0 items-center justify-end gap-2">

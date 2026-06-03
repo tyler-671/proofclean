@@ -110,7 +110,7 @@ export async function POST(
 
     const { error: updateError } = await supabase
       .from("jobs")
-      .update({ status: "complete" })
+      .update({ status: "complete", completed_at: new Date().toISOString() })
       .eq("id", jobId);
 
     if (updateError) {
