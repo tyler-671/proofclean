@@ -149,6 +149,14 @@ function statusLabel(status: string): string {
   return status;
 }
 
+const crewFontClass =
+  "[--font-lexend-deca:var(--font-geist-sans)] font-[family-name:var(--font-lexend-deca)]";
+
+function isJobOverdue(job: CrewJob): boolean {
+  if (!job.jobDate || job.status === "complete") return false;
+  return job.jobDate < getTodayYmd();
+}
+
 const MAX_PHOTOS = 5;
 
 type PendingPhoto = {
@@ -415,7 +423,9 @@ export default function CrewPage() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 font-[family-name:var(--font-geist-sans)]">
+      <div
+        className={`flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 ${crewFontClass}`}
+      >
         <p className="animate-pulse text-base text-slate-500">Loading your jobs...</p>
       </div>
     );
@@ -423,7 +433,9 @@ export default function CrewPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 font-[family-name:var(--font-geist-sans)]">
+      <div
+        className={`flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 ${crewFontClass}`}
+      >
         <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-amber-500" aria-hidden />
           <h1 className="text-xl font-semibold text-slate-900">Hmm.</h1>
@@ -434,64 +446,14 @@ export default function CrewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
+    <div className={`min-h-screen bg-slate-50 text-slate-900 ${crewFontClass}`}>
       <header className="bg-emerald-500 py-6 text-white">
         <div className="flex flex-col items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 220 40"
-            className="h-10 w-auto"
-            aria-label="ProofClean"
-            role="img"
-          >
-            <text
-              x="0"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#111827"
-            >
-              Proof
-            </text>
-            <text
-              x="76"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#10b981"
-            >
-              Clean
-            </text>
-          </svg>
+          <p className="text-2xl font-bold tracking-tight text-white">ProofClean</p>
         </div>
       </header>
 
       <main className="relative">
-        {toast ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="pointer-events-none absolute inset-x-0 top-4 z-50 flex justify-center px-4"
-          >
-            <div
-              className={`flex w-full max-w-[min(100%,28rem)] items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-                toast.type === "success"
-                  ? "bg-emerald-500 text-white"
-                  : "bg-red-500 text-white"
-              }`}
-            >
-              {toast.type === "success" ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
-              ) : (
-                <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
-              )}
-              {toast.message}
-            </div>
-          </div>
-        ) : null}
-
         <section className="mx-auto max-w-md px-4 pt-6 pb-2">
         <h1 className="text-2xl font-semibold text-slate-900">
           Hi{cleanerName ? ` ${cleanerName}` : ""}
@@ -533,9 +495,14 @@ export default function CrewPage() {
                     </p>
                   ) : null}
                   <p className="text-lg font-semibold text-slate-900">{job.locationName}</p>
-                  <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-600">
                     <Calendar className="h-4 w-4 shrink-0" aria-hidden />
                     <span>{formatJobDate(job.jobDate)}</span>
+                    {isJobOverdue(job) ? (
+                      <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                        Overdue
+                      </span>
+                    ) : null}
                   </div>
                   {job.notes?.trim() ? (
                     <div className="mt-3 border-t border-slate-100 pt-3">
@@ -581,6 +548,23 @@ export default function CrewPage() {
         )}
         </div>
       </main>
+
+      {toast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`pointer-events-none fixed bottom-4 left-1/2 z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+            toast.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
+          ) : (
+            <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden />
+          )}
+          {toast.message}
+        </div>
+      ) : null}
 
       {modalJob ? (
         <div
