@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Lexend_Deca } from "next/font/google";
 import "./globals.css";
 
@@ -11,6 +11,14 @@ const lexendDeca = Lexend_Deca({
 export const metadata: Metadata = {
   title: "ProofClean",
   description: "Dispatch your cleaning crew and send clients automated photo proof of every clean.",
+  manifest: "/manifest.json",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#10b981",
 };
 
 export default function RootLayout({
