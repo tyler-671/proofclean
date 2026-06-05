@@ -18,16 +18,10 @@ const navItems = [
   { href: "/cleaners", label: "Cleaners" },
 ];
 
-function getActiveLabel(pathname: string) {
-  const active = navItems.find((item) => pathname === item.href);
-  return active?.label ?? "Dashboard";
-}
-
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const activeLabel = getActiveLabel(pathname);
 
   const onSignOut = async () => {
     if (!supabase) return;
@@ -39,25 +33,35 @@ export default function TopNav() {
   return (
     <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/dashboard" className="flex items-center gap-3 transition hover:opacity-80">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
+        <Link href="/dashboard" className="transition hover:opacity-80">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 220 40"
+            className="h-10 w-auto"
+            aria-label="ProofClean"
+            role="img"
+          >
+            <text
+              x="0"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#111827"
             >
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <div className="leading-tight">
-            <p className="text-base font-semibold tracking-tight text-slate-900">ProofClean</p>
-            <p className="text-xs font-medium text-slate-500">{activeLabel}</p>
-          </div>
+              Proof
+            </text>
+            <text
+              x="76"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#10b981"
+            >
+              Clean
+            </text>
+          </svg>
         </Link>
 
         <div className="flex items-center gap-1">
