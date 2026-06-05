@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   Calendar,
   Camera,
-  Check,
   CheckCircle2,
   Loader2,
   Lock,
@@ -437,11 +436,35 @@ export default function CrewPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-[family-name:var(--font-geist-sans)] text-slate-900">
       <header className="bg-emerald-500 py-6 text-white">
-        <div className="flex flex-col items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-lg bg-emerald-600 shadow-sm">
-            <Check className="h-6 w-6 text-white" strokeWidth={3} aria-hidden />
-          </div>
-          <p className="text-lg font-semibold tracking-tight">ProofClean</p>
+        <div className="flex flex-col items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 220 40"
+            className="h-10 w-auto"
+            aria-label="ProofClean"
+            role="img"
+          >
+            <text
+              x="0"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#111827"
+            >
+              Proof
+            </text>
+            <text
+              x="76"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#10b981"
+            >
+              Clean
+            </text>
+          </svg>
         </div>
       </header>
 

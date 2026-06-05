@@ -79,28 +79,6 @@ const faqs = [
   },
 ];
 
-const Logo = ({ size = "default" }: { size?: "default" | "small" }) => {
-  const dim = size === "small" ? "h-7 w-7" : "h-9 w-9";
-  const iconSize = size === "small" ? 14 : 18;
-  return (
-    <div className={`grid ${dim} place-items-center rounded-xl bg-emerald-500`}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        width={iconSize}
-        height={iconSize}
-      >
-        <polyline points="20 6 9 17 4 12"></polyline>
-      </svg>
-    </div>
-  );
-};
-
 export default function LandingPage() {
   const router = useRouter();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -151,12 +129,36 @@ export default function LandingPage() {
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
       {/* Top nav */}
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <div className="flex items-center gap-3">
-          <Logo size="small" />
-          <span className="text-base font-semibold tracking-tight text-slate-900">
-            ProofClean
-          </span>
-        </div>
+        <Link href="/" className="transition hover:opacity-80">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 220 40"
+            className="h-10 w-auto"
+            aria-label="ProofClean"
+            role="img"
+          >
+            <text
+              x="0"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#111827"
+            >
+              Proof
+            </text>
+            <text
+              x="76"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#10b981"
+            >
+              Clean
+            </text>
+          </svg>
+        </Link>
         <div className="flex items-center gap-2 text-sm font-medium">
           <Link
             href="/login"
@@ -175,6 +177,39 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pt-20">
+        <div className="mb-10 flex flex-col items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 220 40"
+            className="h-10 w-auto"
+            aria-label="ProofClean"
+            role="img"
+          >
+            <text
+              x="0"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#111827"
+            >
+              Proof
+            </text>
+            <text
+              x="76"
+              y="30"
+              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+              fontSize="28"
+              fontWeight="700"
+              fill="#10b981"
+            >
+              Clean
+            </text>
+          </svg>
+          <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
+            Cleaning operations software
+          </p>
+        </div>
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
         Dispatch jobs, organize crews.
         </h1>
