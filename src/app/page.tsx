@@ -128,52 +128,54 @@ export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
       {/* Top nav */}
-      <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/" className="transition hover:opacity-80">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 220 40"
-            className="h-10 w-auto"
-            aria-label="ProofClean"
-            role="img"
-          >
-            <text
-              x="0"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#111827"
+      <header className="w-full overflow-hidden px-4 sm:px-0">
+        <nav className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-2 py-5 sm:px-6">
+          <Link href="/" className="min-w-0 shrink transition hover:opacity-80">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 220 40"
+              className="h-7 w-auto max-w-full sm:h-10"
+              aria-label="ProofClean"
+              role="img"
             >
-              Proof
-            </text>
-            <text
-              x="76"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#10b981"
+              <text
+                x="0"
+                y="30"
+                fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+                fontSize="28"
+                fontWeight="700"
+                fill="#111827"
+              >
+                Proof
+              </text>
+              <text
+                x="76"
+                y="30"
+                fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
+                fontSize="28"
+                fontWeight="700"
+                fill="#10b981"
+              >
+                Clean
+              </text>
+            </svg>
+          </Link>
+          <div className="flex shrink-0 flex-nowrap items-center gap-1.5 text-xs font-medium sm:gap-2 sm:text-sm">
+            <Link
+              href="/login"
+              className="shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-slate-700 transition hover:text-slate-900 sm:px-4 sm:py-2"
             >
-              Clean
-            </text>
-          </svg>
-        </Link>
-        <div className="flex items-center gap-2 text-sm font-medium">
-          <Link
-            href="/login"
-            className="rounded-lg px-4 py-2 text-slate-700 transition hover:text-slate-900"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-white shadow-sm transition hover:bg-emerald-600"
-          >
-            Get started
-          </Link>
-        </div>
-      </nav>
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="shrink-0 whitespace-nowrap rounded-lg bg-emerald-500 px-3 py-1.5 font-semibold text-white shadow-sm transition hover:bg-emerald-600 sm:px-4 sm:py-2"
+            >
+              Get started
+            </Link>
+          </div>
+        </nav>
+      </header>
 
       {/* Hero */}
       <section className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pt-20">
@@ -272,7 +274,7 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing teaser */}
-      <section className="bg-emerald-950 py-20 text-center">
+      <section className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen max-w-none bg-emerald-950 py-20 text-center">
         <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">
             Simple pricing
@@ -394,7 +396,7 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-emerald-950 py-20">
+      <section className="relative right-1/2 left-1/2 -mr-[50vw] -ml-[50vw] w-screen max-w-none bg-emerald-950 py-20">
         <div className="mx-auto w-full max-w-3xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Organize your crew. Reassure your clients. Start today.
