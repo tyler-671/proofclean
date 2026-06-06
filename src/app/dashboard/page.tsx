@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -610,10 +610,7 @@ export default function DashboardPage() {
     return <div className="min-h-screen bg-[#f7fafa]" />;
   }
   return (
-    <div className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
-      <TopNav />
-
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+    <AppShell>
         <section className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Tonight&apos;s operations
@@ -1102,7 +1099,6 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
-      </main>
 
       <ConfirmDialog
         open={pendingConfirm !== null}
@@ -1113,6 +1109,6 @@ export default function DashboardPage() {
         confirmLabel={pendingConfirm?.confirmLabel}
         destructive={pendingConfirm?.destructive}
       />
-    </div>
+    </AppShell>
   );
 }

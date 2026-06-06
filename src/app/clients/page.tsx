@@ -3,8 +3,8 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -230,10 +230,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
-      <TopNav />
-
-      <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+    <AppShell>
         <section className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
@@ -386,7 +383,6 @@ export default function ClientsPage() {
             ))
           )}
         </div>
-      </main>
 
       <ConfirmDialog
         open={pendingConfirm !== null}
@@ -397,6 +393,6 @@ export default function ClientsPage() {
         confirmLabel={pendingConfirm?.confirmLabel}
         destructive={pendingConfirm?.destructive}
       />
-    </div>
+    </AppShell>
   );
 }
