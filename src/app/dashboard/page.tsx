@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -73,6 +74,14 @@ type CleanerOption = {
   name: string;
 };
 
+type PendingConfirm = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+};
+
 const getTodayDateInputValue = () => new Date().toISOString().split("T")[0];
 
 function normalizeJobCleanerJoin(
@@ -126,6 +135,7 @@ export default function DashboardPage() {
   const [editingNotesJobId, setEditingNotesJobId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
   const [savingNotesJobId, setSavingNotesJobId] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const skipBackgroundRefreshRef = useRef(false);
   skipBackgroundRefreshRef.current =
@@ -519,9 +529,7 @@ export default function DashboardPage() {
     await fetchJobs();
   };
 
-  const onDeleteJob = async (job: DashboardJob) => {
-    if (!window.confirm("Delete this job? This cannot be undone.")) return;
-
+  const deleteJob = async (job: DashboardJob) => {
     if (!supabase) {
       setJobsError("Supabase environment variables are missing.");
       return;
@@ -562,6 +570,16 @@ export default function DashboardPage() {
 
     setDeletingJobId(null);
     await fetchJobs();
+  };
+
+  const onDeleteJob = (job: DashboardJob) => {
+    setPendingConfirm({
+      title: "Delete job",
+      message: "Delete this job? This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => void deleteJob(job),
+    });
   };
 
   const onSaveJobNotes = async (jobId: string) => {
@@ -1005,10 +1023,10 @@ export default function DashboardPage() {
                       type="button"
                       aria-label="Delete job"
                       disabled={deletingJobId === job.id}
-                      onClick={() => void onDeleteJob(job)}
-                      className="inline-flex cursor-pointer items-center justify-center rounded-md bg-transparent p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => onDeleteJob(job)}
+                      className="inline-flex cursor-pointer items-center justify-center rounded-md bg-transparent p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden />
+                      <Trash2 className="h-5 w-5" aria-hidden />
                     </button>
                   </div>
                   </div>
@@ -1085,6 +1103,16 @@ export default function DashboardPage() {
           </div>
         </section>
       </main>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title ?? ""}
+        message={pendingConfirm?.message ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        destructive={pendingConfirm?.destructive}
+      />
     </div>
   );
 }

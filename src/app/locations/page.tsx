@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,6 +32,14 @@ type Location = {
   client_name: string;
 };
 
+type PendingConfirm = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+};
+
 export default function LocationsPage() {
   const router = useRouter();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
@@ -46,6 +55,7 @@ export default function LocationsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const fetchLocations = useCallback(async () => {
     if (!supabase) {
@@ -208,11 +218,8 @@ export default function LocationsPage() {
     await fetchLocations();
   };
 
-  const onDelete = async (locationId: string) => {
+  const deleteLocation = async (locationId: string) => {
     if (!supabase) return;
-
-    const confirmed = window.confirm("Delete this location?");
-    if (!confirmed) return;
 
     setDeletingLocationId(locationId);
 
@@ -226,6 +233,16 @@ export default function LocationsPage() {
 
     setDeletingLocationId(null);
     await fetchLocations();
+  };
+
+  const onDelete = (locationId: string) => {
+    setPendingConfirm({
+      title: "Delete location",
+      message: "Delete this location?",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => void deleteLocation(locationId),
+    });
   };
 
   if (!isAuthChecked) {
@@ -386,7 +403,7 @@ export default function LocationsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void onDelete(location.id)}
+                    onClick={() => onDelete(location.id)}
                     disabled={deletingLocationId === location.id}
                     className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -398,6 +415,16 @@ export default function LocationsPage() {
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title ?? ""}
+        message={pendingConfirm?.message ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        destructive={pendingConfirm?.destructive}
+      />
     </div>
   );
 }

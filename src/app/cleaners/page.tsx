@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { Copy, Check, Power, RefreshCw, Trash2, MoreHorizontal } from "lucide-react";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,6 +19,14 @@ type Cleaner = {
   phone: string | null;
   access_token: string;
   active: boolean;
+};
+
+type PendingConfirm = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
 };
 
 function sortCleaners(list: Cleaner[]) {
@@ -59,6 +68,7 @@ export default function CleanersPage() {
   const [regeneratingCleanerId, setRegeneratingCleanerId] = useState<string | null>(null);
   const [copiedCleanerId, setCopiedCleanerId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
   // Close the ••• menu when clicking outside
   useEffect(() => {
     if (!openMenuId) return;
@@ -189,6 +199,26 @@ it gives access to your assigned jobs.`;
     }
   };
 
+  const performToggleActive = async (cleaner: Cleaner) => {
+    if (!supabase) return;
+
+    setTogglingCleanerId(cleaner.id);
+
+    const { error } = await supabase
+      .from("cleaners")
+      .update({ active: !cleaner.active })
+      .eq("id", cleaner.id);
+
+    if (error) {
+      setLoadError(error.message);
+      setTogglingCleanerId(null);
+      return;
+    }
+
+    setTogglingCleanerId(null);
+    await fetchCleaners();
+  };
+
   const onToggleActive = async (cleaner: Cleaner) => {
     if (!supabase) return;
 
@@ -210,33 +240,20 @@ it gives access to your assigned jobs.`;
           ? `${cleaner.name} has ${pendingCount} pending job(s). Deactivating will prevent them from accessing those jobs. Owner will need to reassign these jobs to another cleaner. Continue?`
           : `Deactivate ${cleaner.name}? Their link will stop working immediately.`;
 
-      if (!window.confirm(confirmMessage)) return;
-    }
-
-    setTogglingCleanerId(cleaner.id);
-
-    const { error } = await supabase
-      .from("cleaners")
-      .update({ active: !cleaner.active })
-      .eq("id", cleaner.id);
-
-    if (error) {
-      setLoadError(error.message);
-      setTogglingCleanerId(null);
+      setPendingConfirm({
+        title: "Deactivate cleaner",
+        message: confirmMessage,
+        confirmLabel: "Continue",
+        onConfirm: () => void performToggleActive(cleaner),
+      });
       return;
     }
 
-    setTogglingCleanerId(null);
-    await fetchCleaners();
+    await performToggleActive(cleaner);
   };
 
-  const onRegenerateLink = async (cleaner: Cleaner) => {
+  const performRegenerateLink = async (cleaner: Cleaner) => {
     if (!supabase) return;
-
-    const confirmed = window.confirm(
-      "This will invalidate the old link. The cleaner will need the new link to access their jobs. Continue?",
-    );
-    if (!confirmed) return;
 
     setRegeneratingCleanerId(cleaner.id);
     const accessToken = crypto.randomUUID().replace(/-/g, "");
@@ -256,13 +273,18 @@ it gives access to your assigned jobs.`;
     await fetchCleaners();
   };
 
-  const onDelete = async (cleaner: Cleaner) => {
-    if (!supabase) return;
+  const onRegenerateLink = (cleaner: Cleaner) => {
+    setPendingConfirm({
+      title: "Regenerate link",
+      message:
+        "This will invalidate the old link. The cleaner will need the new link to access their jobs. Continue?",
+      confirmLabel: "Continue",
+      onConfirm: () => void performRegenerateLink(cleaner),
+    });
+  };
 
-    const confirmed = window.confirm(
-      `Delete ${cleaner.name}? This cannot be undone. Their job history will be preserved but unassigned.`,
-    );
-    if (!confirmed) return;
+  const performDelete = async (cleaner: Cleaner) => {
+    if (!supabase) return;
 
     setDeletingCleanerId(cleaner.id);
 
@@ -276,6 +298,16 @@ it gives access to your assigned jobs.`;
 
     setDeletingCleanerId(null);
     await fetchCleaners();
+  };
+
+  const onDelete = (cleaner: Cleaner) => {
+    setPendingConfirm({
+      title: "Delete cleaner",
+      message: `Delete ${cleaner.name}? This cannot be undone. Their job history will be preserved but unassigned.`,
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => void performDelete(cleaner),
+    });
   };
 
   if (!isAuthChecked) {
@@ -470,7 +502,7 @@ it gives access to your assigned jobs.`;
                         role="menuitem"
                         onClick={() => {
                           setOpenMenuId(null);
-                          void onRegenerateLink(cleaner);
+                          onRegenerateLink(cleaner);
                         }}
                         disabled={regeneratingCleanerId === cleaner.id}
                         className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
@@ -485,7 +517,7 @@ it gives access to your assigned jobs.`;
                         role="menuitem"
                         onClick={() => {
                           setOpenMenuId(null);
-                          void onDelete(cleaner);
+                          onDelete(cleaner);
                         }}
                         disabled={deletingCleanerId === cleaner.id}
                         className="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-60"
@@ -502,6 +534,16 @@ it gives access to your assigned jobs.`;
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title ?? ""}
+        message={pendingConfirm?.message ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        destructive={pendingConfirm?.destructive}
+      />
     </div>
   );
 }

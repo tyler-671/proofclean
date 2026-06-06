@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import TopNav from "@/components/TopNav";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,6 +31,14 @@ function locationCountLabel(count: number): string {
   return count === 1 ? "1 location" : `${count} locations`;
 }
 
+type PendingConfirm = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+};
+
 export default function ClientsPage() {
   const router = useRouter();
   const [isAuthChecked, setIsAuthChecked] = useState(false);
@@ -44,6 +53,7 @@ export default function ClientsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
 
   const fetchClients = useCallback(async () => {
     if (!supabase) {
@@ -188,13 +198,8 @@ export default function ClientsPage() {
     await fetchClients();
   };
 
-  const onDelete = async (clientId: string) => {
+  const deleteClient = async (clientId: string) => {
     if (!supabase) return;
-
-    const confirmed = window.confirm(
-      "Delete this client? Any locations linked to this client will also be deleted.",
-    );
-    if (!confirmed) return;
 
     setDeletingClientId(clientId);
 
@@ -208,6 +213,16 @@ export default function ClientsPage() {
 
     setDeletingClientId(null);
     await fetchClients();
+  };
+
+  const onDelete = (clientId: string) => {
+    setPendingConfirm({
+      title: "Delete client",
+      message: "Delete this client? Any locations linked to this client will also be deleted.",
+      confirmLabel: "Delete",
+      destructive: true,
+      onConfirm: () => void deleteClient(clientId),
+    });
   };
 
   if (!isAuthChecked) {
@@ -360,7 +375,7 @@ export default function ClientsPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void onDelete(client.id)}
+                    onClick={() => onDelete(client.id)}
                     disabled={deletingClientId === client.id}
                     className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -372,6 +387,16 @@ export default function ClientsPage() {
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        onClose={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm?.onConfirm()}
+        title={pendingConfirm?.title ?? ""}
+        message={pendingConfirm?.message ?? ""}
+        confirmLabel={pendingConfirm?.confirmLabel}
+        destructive={pendingConfirm?.destructive}
+      />
     </div>
   );
 }
