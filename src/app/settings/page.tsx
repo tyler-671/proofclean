@@ -297,7 +297,7 @@ export default function SettingsPage() {
     }
 
     await supabase.auth.signOut();
-    router.replace("/");
+    router.replace("/account-deleted");
   };
 
   if (!isAuthChecked && isLoading) {
