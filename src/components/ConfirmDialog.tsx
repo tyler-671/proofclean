@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -11,6 +11,8 @@ type ConfirmDialogProps = {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  confirmTextRequired?: string;
+  confirmTextLabel?: string;
 };
 
 export default function ConfirmDialog({
@@ -22,7 +24,11 @@ export default function ConfirmDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   destructive = false,
+  confirmTextRequired,
+  confirmTextLabel,
 }: ConfirmDialogProps) {
+  const [typedConfirm, setTypedConfirm] = useState("");
+
   useEffect(() => {
     if (!open) return;
 
@@ -36,7 +42,16 @@ export default function ConfirmDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) {
+      setTypedConfirm("");
+    }
+  }, [open]);
+
   if (!open) return null;
+
+  const canConfirm =
+    !confirmTextRequired || typedConfirm === confirmTextRequired;
 
   return (
     <div
@@ -57,6 +72,24 @@ export default function ConfirmDialog({
         <p id="confirm-dialog-message" className="mt-2 text-sm text-slate-600">
           {message}
         </p>
+        {confirmTextRequired ? (
+          <div className="mt-4">
+            <label
+              htmlFor="confirm-dialog-input"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              {confirmTextLabel ?? `Type ${confirmTextRequired} to confirm`}
+            </label>
+            <input
+              id="confirm-dialog-input"
+              type="text"
+              value={typedConfirm}
+              onChange={(event) => setTypedConfirm(event.target.value)}
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              autoComplete="off"
+            />
+          </div>
+        ) : null}
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
@@ -67,11 +100,12 @@ export default function ConfirmDialog({
           </button>
           <button
             type="button"
+            disabled={!canConfirm}
             onClick={() => {
               onConfirm();
               onClose();
             }}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
+            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
               destructive
                 ? "bg-red-600 hover:bg-red-700"
                 : "bg-emerald-500 hover:bg-emerald-600"

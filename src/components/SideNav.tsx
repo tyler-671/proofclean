@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
+  Cog6ToothIcon,
   MapPinIcon,
   Squares2X2Icon,
   UserIcon,
@@ -19,6 +20,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase =
   supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+const settingsItem = { href: "/settings", label: "Settings", icon: Cog6ToothIcon };
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Squares2X2Icon },
@@ -151,6 +154,33 @@ function SidebarContent({
             forceExpanded
               ? "mx-2 mb-3 border-t border-slate-200"
               : "mx-1 mb-3 border-t border-slate-200 transition-all duration-200 ease-out group-hover:mx-2"
+          }
+        />
+        {(() => {
+          const isActive = pathname === settingsItem.href;
+          const SettingsIcon = settingsItem.icon;
+
+          return (
+            <Link
+              href={settingsItem.href}
+              onClick={onNavigate}
+              aria-label={settingsItem.label}
+              className={
+                isActive
+                  ? `${rowClass} bg-emerald-50 text-sm font-semibold text-emerald-700`
+                  : `${rowClass} text-sm font-medium text-slate-600 hover:bg-slate-50`
+              }
+            >
+              <SettingsIcon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className={labelClass}>{settingsItem.label}</span>
+            </Link>
+          );
+        })()}
+        <div
+          className={
+            forceExpanded
+              ? "mx-2 mb-3 mt-3 border-t border-slate-200"
+              : "mx-1 mb-3 mt-3 border-t border-slate-200 transition-all duration-200 ease-out group-hover:mx-2"
           }
         />
         <button

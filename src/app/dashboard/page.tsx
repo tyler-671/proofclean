@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import { CheckCircle2, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -136,6 +136,9 @@ export default function DashboardPage() {
   const [notesDraft, setNotesDraft] = useState("");
   const [savingNotesJobId, setSavingNotesJobId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
+    null,
+  );
 
   const skipBackgroundRefreshRef = useRef(false);
   skipBackgroundRefreshRef.current =
@@ -346,6 +349,19 @@ export default function DashboardPage() {
   useEffect(() => {
     void fetchJobs();
   }, [fetchJobs]);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("proofclean_password_updated") !== "1") return;
+
+    sessionStorage.removeItem("proofclean_password_updated");
+    setToast({ message: "Password updated", type: "success" });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     if (!isAuthChecked) return;
@@ -1109,6 +1125,21 @@ export default function DashboardPage() {
         confirmLabel={pendingConfirm?.confirmLabel}
         destructive={pendingConfirm?.destructive}
       />
+
+      {toast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`fixed bottom-4 left-1/2 z-50 flex max-w-[min(100%-2rem,28rem)] -translate-x-1/2 items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
+            toast.type === "success" ? "bg-emerald-500 text-white" : "bg-red-500 text-white"
+          }`}
+        >
+          {toast.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0" aria-hidden />
+          ) : null}
+          {toast.message}
+        </div>
+      ) : null}
     </AppShell>
   );
 }

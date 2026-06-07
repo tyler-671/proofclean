@@ -8,6 +8,7 @@ type NotifyPayload = {
   location_name?: string;
   cleaner_name?: string;
   location_id?: string;
+  user_id?: string;
   photoUrls?: string[];
 };
 
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as NotifyPayload;
-    const { location_name, cleaner_name, location_id, photoUrls } = body;
+    const { location_name, cleaner_name, location_id, user_id, photoUrls } = body;
 
     if (!location_name || !cleaner_name || !location_id) {
       return NextResponse.json(
@@ -130,12 +131,39 @@ export async function POST(request: Request) {
         ? ` ${photoCount} photo${photoCount === 1 ? "" : "s"} attached.`
         : "";
 
+    let senderName: string | null = null;
+    let businessName: string | null = null;
+
+    if (user_id) {
+      const { data: settings } = await supabaseService
+        .from("user_settings")
+        .select("sender_name, business_name")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+      senderName = settings?.sender_name ?? null;
+      businessName = settings?.business_name ?? null;
+    }
+
+    const fromAddress = senderName
+      ? `${senderName} <notifications@proofclean.ca>`
+      : "ProofClean <notifications@proofclean.ca>";
+
+    const subject = businessName
+      ? `Photo proof from ${businessName}`
+      : "Your office has been cleaned ✓";
+
+    const proofSource = businessName ? businessName : "ProofClean";
+    const textBody = businessName
+      ? `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ${businessName}.${photoLine}`
+      : `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ${proofSource}.${photoLine}`;
+
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
-      from: "ProofClean <notifications@proofclean.ca>",
+      from: fromAddress,
       to: client.email,
-      subject: "Your office has been cleaned ✓",
-      text: `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ProofClean.${photoLine}`,
+      subject,
+      text: textBody,
       ...(attachments.length > 0 ? { attachments } : {}),
     });
 

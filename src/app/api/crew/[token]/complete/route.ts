@@ -152,6 +152,7 @@ export async function POST(
         location_name: jobRow.location_name,
         cleaner_name: jobRow.cleaner_name,
         location_id: jobRow.location_id,
+        user_id: jobRow.user_id,
         ...(photoUrls.length > 0 ? { photoUrls } : {}),
       }),
     });
