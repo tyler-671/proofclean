@@ -197,7 +197,11 @@ export default function SignupPage() {
               <button
                 type="submit"
                 disabled={isSubmitting || !isPasswordStrong(password)}
-                className="w-full rounded-lg bg-emerald-500 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+                className={`w-full rounded-lg py-3 text-sm font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                  isPasswordStrong(password)
+                    ? "cursor-pointer bg-emerald-500 text-white hover:bg-emerald-600"
+                    : "cursor-not-allowed bg-emerald-200 text-white/70"
+                }`}
               >
                 {isSubmitting ? "Creating account..." : "Create account"}
               </button>

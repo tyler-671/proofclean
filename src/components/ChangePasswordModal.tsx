@@ -187,7 +187,11 @@ export default function ChangePasswordModal({
             <button
               type="submit"
               disabled={isSubmitting || !isPasswordStrong(newPassword)}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+              className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                isPasswordStrong(newPassword)
+                  ? "cursor-pointer bg-emerald-500 text-white hover:bg-emerald-600"
+                  : "cursor-not-allowed bg-emerald-200 text-white/70"
+              }`}
             >
               {isSubmitting ? (
                 <>
