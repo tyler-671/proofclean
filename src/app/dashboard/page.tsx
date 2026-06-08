@@ -483,6 +483,10 @@ export default function DashboardPage() {
 
       if (job?.locationId) {
         try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
           const notifyResponse = await fetch("/api/notify", {
             method: "POST",
             headers: {
@@ -492,6 +496,7 @@ export default function DashboardPage() {
               location_name: job.location,
               cleaner_name: job.cleaner,
               location_id: job.locationId,
+              user_id: session?.user?.id,
             }),
           });
 
