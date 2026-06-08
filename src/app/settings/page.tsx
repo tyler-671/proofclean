@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Upload } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ChangeEmailModal from "@/components/ChangeEmailModal";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
@@ -14,7 +14,50 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          fetch: (url, options = {}) => fetch(url, { ...options, cache: "no-store" }),
+        },
+      })
+    : null;
+
+const LOGO_BUCKET = "business-logos";
+const MAX_LOGO_BYTES = 1024 * 1024;
+const ACCEPTED_LOGO_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/svg+xml",
+]);
+
+function extensionForMimeType(mimeType: string): string | null {
+  switch (mimeType) {
+    case "image/png":
+      return "png";
+    case "image/jpeg":
+    case "image/jpg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    case "image/svg+xml":
+      return "svg";
+    default:
+      return null;
+  }
+}
+
+function storagePathFromLogoUrl(logoUrl: string): string | null {
+  try {
+    const marker = `/${LOGO_BUCKET}/`;
+    const index = new URL(logoUrl).pathname.indexOf(marker);
+    if (index === -1) return null;
+    return new URL(logoUrl).pathname.slice(index + marker.length);
+  } catch {
+    return null;
+  }
+}
 
 const TIMEZONES = [
   { value: "America/Edmonton", label: "Mountain Time — Edmonton" },
@@ -35,6 +78,7 @@ type UserSettings = {
   user_id: string;
   business_name: string | null;
   sender_name: string | null;
+  logo_url: string | null;
   timezone: string;
   email_notifications_enabled: boolean;
 };
@@ -78,7 +122,11 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [removeLogoDialogOpen, setRemoveLogoDialogOpen] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isRemovingLogo, setIsRemovingLogo] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = useCallback((message: string, type: "success" | "error") => {
     setToast({ message, type });
@@ -162,10 +210,15 @@ export default function SettingsPage() {
     patch: Partial<
       Pick<
         UserSettings,
-        "business_name" | "sender_name" | "timezone" | "email_notifications_enabled"
+        | "business_name"
+        | "sender_name"
+        | "logo_url"
+        | "timezone"
+        | "email_notifications_enabled"
       >
     >,
     fieldKey: string,
+    options?: { successMessage?: string },
   ) => {
     if (!supabase) return false;
 
@@ -198,8 +251,107 @@ export default function SettingsPage() {
     }
 
     setSettings(result.settings);
-    showToast("Settings saved.", "success");
+    showToast(options?.successMessage ?? "Settings saved.", "success");
     return true;
+  };
+
+  const deleteLogoFromStorage = async (logoUrl: string) => {
+    if (!supabase) return;
+
+    const storagePath = storagePathFromLogoUrl(logoUrl);
+    if (!storagePath) return;
+
+    const { error } = await supabase.storage.from(LOGO_BUCKET).remove([storagePath]);
+    if (error) {
+      console.error("Failed to delete logo from storage:", error);
+    }
+  };
+
+  const handleLogoFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || !supabase) return;
+
+    if (!ACCEPTED_LOGO_MIME_TYPES.has(file.type)) {
+      showToast("Please upload a PNG, JPG, SVG, or WebP image.", "error");
+      return;
+    }
+
+    if (file.size > MAX_LOGO_BYTES) {
+      showToast("Logo must be 1MB or smaller.", "error");
+      return;
+    }
+
+    const extension = extensionForMimeType(file.type);
+    if (!extension) {
+      showToast("Please upload a PNG, JPG, SVG, or WebP image.", "error");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      setIsUploadingLogo(false);
+      showToast("Please sign in again.", "error");
+      return;
+    }
+
+    const previousLogoUrl = settings?.logo_url ?? null;
+
+    if (previousLogoUrl) {
+      await deleteLogoFromStorage(previousLogoUrl);
+    }
+
+    const storagePath = `${session.user.id}/logo-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(storagePath, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      setIsUploadingLogo(false);
+      showToast(uploadError.message, "error");
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(storagePath);
+    const publicUrl = publicUrlData.publicUrl;
+
+    const ok = await patchSettings({ logo_url: publicUrl }, "logo_url", {
+      successMessage: "Logo uploaded",
+    });
+
+    setIsUploadingLogo(false);
+
+    if (!ok && previousLogoUrl) {
+      await supabase.storage.from(LOGO_BUCKET).remove([storagePath]);
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!supabase || !settings?.logo_url) return;
+
+    setIsRemovingLogo(true);
+
+    await deleteLogoFromStorage(settings.logo_url);
+
+    const ok = await patchSettings({ logo_url: null }, "logo_url", {
+      successMessage: "Logo removed",
+    });
+
+    setIsRemovingLogo(false);
+    setRemoveLogoDialogOpen(false);
+
+    if (!ok) {
+      showToast("Could not remove logo.", "error");
+    }
   };
 
   const handleBusinessNameBlur = async () => {
@@ -368,6 +520,75 @@ export default function SettingsPage() {
               <CheckCircleIcon className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden />
               Changes save automatically.
             </p>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={(event) => void handleLogoFileSelect(event)}
+            />
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Business logo
+              </label>
+              {settings?.logo_url ? (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg border border-slate-200 bg-white p-4">
+                    {isUploadingLogo ? (
+                      <div className="flex h-32 items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-emerald-500" aria-hidden />
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={settings.logo_url}
+                        alt="Business logo"
+                        className="mx-auto max-h-32 max-w-[200px] object-contain"
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={isUploadingLogo || isRemovingLogo}
+                      className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Replace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRemoveLogoDialogOpen(true)}
+                      disabled={isUploadingLogo || isRemovingLogo}
+                      className="px-2 py-2 text-sm font-semibold text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={isUploadingLogo}
+                  className="flex min-h-[120px] w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-[#f7fafa] px-4 py-8 transition hover:border-emerald-400 hover:bg-emerald-50/40 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isUploadingLogo ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-500" aria-hidden />
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5 text-slate-500" aria-hidden />
+                      <span className="mt-2 text-sm font-medium text-slate-700">
+                        Click to upload logo
+                      </span>
+                      <span className="mt-1 text-xs text-slate-500">
+                        PNG, JPG, SVG, or WebP. Max 1MB.
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
             <div>
               <label
                 htmlFor="business-name"
@@ -516,6 +737,16 @@ export default function SettingsPage() {
         userEmail={email}
         onSuccess={(message) => showToast(message, "success")}
         onError={(message) => showToast(message, "error")}
+      />
+
+      <ConfirmDialog
+        open={removeLogoDialogOpen}
+        onClose={() => setRemoveLogoDialogOpen(false)}
+        onConfirm={() => void handleRemoveLogo()}
+        title="Remove logo"
+        message="Remove logo? You can upload a new one anytime."
+        confirmLabel="Remove"
+        destructive
       />
 
       <ConfirmDialog

@@ -27,6 +27,7 @@ export type UserSettings = {
   user_id: string;
   business_name: string | null;
   sender_name: string | null;
+  logo_url: string | null;
   timezone: string;
   email_notifications_enabled: boolean;
   created_at: string;
@@ -121,6 +122,7 @@ export async function GET(request: Request) {
 const PATCHABLE_FIELDS = [
   "business_name",
   "sender_name",
+  "logo_url",
   "timezone",
   "email_notifications_enabled",
 ] as const;
