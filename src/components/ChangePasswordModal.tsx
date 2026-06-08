@@ -3,6 +3,9 @@
 import { FormEvent, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Loader2, X } from "lucide-react";
+import PasswordStrengthChecklist, {
+  isPasswordStrong,
+} from "@/components/PasswordStrengthChecklist";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -50,8 +53,8 @@ export default function ChangePasswordModal({
       return;
     }
 
-    if (newPassword.length < 8) {
-      setFormError("New password must be at least 8 characters.");
+    if (!isPasswordStrong(newPassword)) {
+      setFormError("Password doesn't meet all requirements");
       return;
     }
 
@@ -147,6 +150,7 @@ export default function ChangePasswordModal({
               onChange={(event) => setNewPassword(event.target.value)}
               className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             />
+            <PasswordStrengthChecklist password={newPassword} />
           </div>
 
           <div>
@@ -182,7 +186,7 @@ export default function ChangePasswordModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isPasswordStrong(newPassword)}
               className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isSubmitting ? (

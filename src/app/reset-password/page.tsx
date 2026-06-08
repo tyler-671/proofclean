@@ -4,6 +4,9 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import PasswordStrengthChecklist, {
+  isPasswordStrong,
+} from "@/components/PasswordStrengthChecklist";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -95,8 +98,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (password.length < 8) {
-      setStatusMessage("Password must be at least 8 characters.");
+    if (!isPasswordStrong(password)) {
+      setStatusMessage("Password doesn't meet all requirements");
       return;
     }
 
@@ -204,8 +207,9 @@ export default function ResetPasswordPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                    placeholder="At least 8 characters"
+                    placeholder="Create a strong password"
                   />
+                  <PasswordStrengthChecklist password={password} />
                 </div>
                 <div>
                   <label
@@ -234,7 +238,7 @@ export default function ResetPasswordPage() {
                 ) : null}
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !isPasswordStrong(password)}
                   className="w-full rounded-lg bg-emerald-500 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSubmitting ? "Updating..." : "Update password"}
