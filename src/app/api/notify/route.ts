@@ -133,16 +133,18 @@ export async function POST(request: Request) {
 
     let senderName: string | null = null;
     let businessName: string | null = null;
+    let logoUrl: string | null = null;
 
     if (user_id) {
       const { data: settings } = await supabaseService
         .from("user_settings")
-        .select("sender_name, business_name")
+        .select("sender_name, business_name, logo_url")
         .eq("user_id", user_id)
         .maybeSingle();
 
       senderName = settings?.sender_name ?? null;
       businessName = settings?.business_name ?? null;
+      logoUrl = settings?.logo_url ?? null;
     }
 
     const fromAddress = senderName
@@ -158,12 +160,28 @@ export async function POST(request: Request) {
       ? `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ${businessName}.${photoLine}`
       : `Good news — ${location_name} has been cleaned tonight by ${cleaner_name}. This is your automated proof of clean from ${proofSource}.${photoLine}`;
 
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const trimmedLogoUrl = logoUrl?.trim() ?? "";
+    const logoBlock =
+      trimmedLogoUrl.length > 0
+        ? `<img src="${escapeHtml(trimmedLogoUrl)}" alt="${escapeHtml(businessName ?? "Business logo")}" style="max-width: 200px; max-height: 80px; height: auto; display: block; margin: 0 auto 24px auto;" />`
+        : "";
+
+    const htmlBody = `${logoBlock}<p style="margin: 0; font-family: sans-serif; font-size: 16px; line-height: 1.5; color: #334155;">${escapeHtml(textBody)}</p>`;
+
     const resend = new Resend(apiKey);
     const { data, error } = await resend.emails.send({
       from: fromAddress,
       to: client.email,
       subject,
       text: textBody,
+      html: htmlBody,
       ...(attachments.length > 0 ? { attachments } : {}),
     });
 
