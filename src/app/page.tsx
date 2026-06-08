@@ -182,7 +182,7 @@ export default function LandingPage() {
         <div className="mb-10 flex w-full flex-col items-center text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 170 40"
+            viewBox="-3 0 160 40"
             className="inline-block h-10 w-auto"
             aria-label="ProofClean"
             role="img"
