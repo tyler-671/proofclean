@@ -170,7 +170,7 @@ export async function POST(request: Request) {
     const trimmedLogoUrl = logoUrl?.trim() ?? "";
     const logoBlock =
       trimmedLogoUrl.length > 0
-        ? `<img src="${escapeHtml(trimmedLogoUrl)}" alt="${escapeHtml(businessName ?? "Business logo")}" style="max-width: 200px; max-height: 80px; height: auto; display: block; margin: 0 auto 24px auto;" />`
+        ? `<img src="${escapeHtml(trimmedLogoUrl)}" alt="${escapeHtml(businessName ?? "Business logo")}" style="max-width: 200px; max-height: 80px; height: auto; display: block; margin: 0 0 24px 0;" />`
         : "";
 
     const htmlBody = `${logoBlock}<p style="margin: 0; font-family: sans-serif; font-size: 16px; line-height: 1.5; color: #334155;">${escapeHtml(textBody)}</p>`;
