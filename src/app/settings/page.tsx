@@ -363,6 +363,7 @@ export default function SettingsPage() {
             title="Business"
             description="How your company appears on proof emails to clients."
           >
+            <p className="text-xs text-slate-500">Changes save automatically.</p>
             <div>
               <label
                 htmlFor="business-name"
@@ -409,6 +410,7 @@ export default function SettingsPage() {
             title="Preferences"
             description="Timezone and notification preferences for your account."
           >
+            <p className="text-xs text-slate-500">Changes save automatically.</p>
             <div>
               <label
                 htmlFor="timezone"

@@ -35,6 +35,8 @@ type JobRow = {
   status: DbJobStatus;
   job_date: string | null;
   completed_at: string | null;
+  created_at: string;
+  updated_at: string | null;
   locations:
     | { name: string; clients: { name: string } | { name: string }[] | null }
     | { name: string; clients: { name: string } | { name: string }[] | null }[]
@@ -54,6 +56,8 @@ type DashboardJob = {
   status: JobStatus;
   jobDate: string | null;
   completedAt: string | null;
+  createdAt: string;
+  updatedAt: string | null;
   notes: string | null;
 };
 
@@ -284,7 +288,7 @@ export default function DashboardPage() {
     const { data, error } = await supabase
       .from("jobs")
       .select(
-        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, completed_at, notes, locations(name, clients(name)), cleaners(id, name, active)",
+        "id, location_name, location_id, cleaner_id, cleaner_name, status, job_date, completed_at, created_at, updated_at, notes, locations(name, clients(name)), cleaners(id, name, active)",
       )
       .eq("user_id", user.id)
       .order("job_date", { ascending: true, nullsFirst: false })
@@ -314,6 +318,8 @@ export default function DashboardPage() {
         assignedCleaner,
         jobDate: job.job_date,
         completedAt: job.completed_at,
+        createdAt: job.created_at,
+        updatedAt: job.updated_at,
         notes: job.notes,
         status:
           job.status === "complete"
@@ -328,16 +334,25 @@ export default function DashboardPage() {
       const aIsComplete = a.status === "Complete";
       const bIsComplete = b.status === "Complete";
 
-      if (aIsComplete && !bIsComplete) return 1;
-      if (!aIsComplete && bIsComplete) return -1;
+      if (aIsComplete !== bIsComplete) {
+        return aIsComplete ? 1 : -1;
+      }
 
-      if (aIsComplete && bIsComplete) {
-        const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
-        const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+      if (aIsComplete) {
+        const aTime = a.completedAt
+          ? new Date(a.completedAt).getTime()
+          : a.updatedAt
+            ? new Date(a.updatedAt).getTime()
+            : 0;
+        const bTime = b.completedAt
+          ? new Date(b.completedAt).getTime()
+          : b.updatedAt
+            ? new Date(b.updatedAt).getTime()
+            : 0;
         return bTime - aTime;
       }
 
-      return 0;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
     setJobs(sortedJobs);
@@ -470,7 +485,12 @@ export default function DashboardPage() {
     setUpdatingJobId(jobId);
     setJobsError(null);
 
-    const { error } = await supabase.from("jobs").update({ status: nextStatus }).eq("id", jobId);
+    const statusUpdate =
+      nextStatus === "complete"
+        ? { status: nextStatus, completed_at: new Date().toISOString() }
+        : { status: nextStatus };
+
+    const { error } = await supabase.from("jobs").update(statusUpdate).eq("id", jobId);
 
     if (error) {
       setJobsError(error.message);
