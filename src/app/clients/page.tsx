@@ -1,10 +1,19 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import type { AddressSelection } from "@/components/LocationAddressField";
+
+const LocationAddressField = dynamic(() => import("@/components/LocationAddressField"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-10 w-full animate-pulse rounded-lg border border-slate-200 bg-slate-50" />
+  ),
+});
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,6 +31,9 @@ type LocationRow = {
   id: string;
   name: string;
   client_id: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type ClientRow = {
@@ -35,6 +47,9 @@ type ClientLocation = {
   id: string;
   name: string;
   client_id: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type Client = {
@@ -76,10 +91,17 @@ export default function ClientsPage() {
 
   const [addingLocationClientId, setAddingLocationClientId] = useState<string | null>(null);
   const [inlineLocationName, setInlineLocationName] = useState("");
+  const [inlineLocationAddress, setInlineLocationAddress] = useState("");
+  const [inlineLocationAddressSelection, setInlineLocationAddressSelection] =
+    useState<AddressSelection | null>(null);
   const [isSavingInlineLocation, setIsSavingInlineLocation] = useState(false);
 
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
   const [editingLocationName, setEditingLocationName] = useState("");
+  const [editingLocationAddress, setEditingLocationAddress] = useState("");
+  const [editingLocationAddressSelection, setEditingLocationAddressSelection] = useState<
+    AddressSelection | null | undefined
+  >(undefined);
   const [isSavingLocationEdit, setIsSavingLocationEdit] = useState(false);
 
   const [deletingLocationId, setDeletingLocationId] = useState<string | null>(null);
@@ -126,7 +148,7 @@ export default function ClientsPage() {
 
     const { data, error } = await supabase
       .from("clients")
-      .select("id, name, email, locations(id, name, client_id)")
+      .select("id, name, email, locations(id, name, client_id, address, latitude, longitude)")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
 
@@ -332,6 +354,8 @@ export default function ClientsPage() {
   const cancelInlineAdd = () => {
     setAddingLocationClientId(null);
     setInlineLocationName("");
+    setInlineLocationAddress("");
+    setInlineLocationAddressSelection(null);
   };
 
   const saveInlineLocation = async (clientId: string) => {
@@ -354,11 +378,26 @@ export default function ClientsPage() {
       return;
     }
 
-    const { error } = await supabase.from("locations").insert({
+    const insertPayload: {
+      user_id: string;
+      client_id: string;
+      name: string;
+      address?: string;
+      latitude?: number;
+      longitude?: number;
+    } = {
       user_id: user.id,
       client_id: clientId,
       name: trimmedName,
-    });
+    };
+
+    if (inlineLocationAddressSelection) {
+      insertPayload.address = inlineLocationAddressSelection.address;
+      insertPayload.latitude = inlineLocationAddressSelection.latitude;
+      insertPayload.longitude = inlineLocationAddressSelection.longitude;
+    }
+
+    const { error } = await supabase.from("locations").insert(insertPayload);
 
     setIsSavingInlineLocation(false);
 
@@ -374,12 +413,16 @@ export default function ClientsPage() {
   const startEditLocation = (location: ClientLocation) => {
     setEditingLocationId(location.id);
     setEditingLocationName(location.name);
+    setEditingLocationAddress(location.address ?? "");
+    setEditingLocationAddressSelection(undefined);
     setAddingLocationClientId(null);
   };
 
   const cancelEditLocation = () => {
     setEditingLocationId(null);
     setEditingLocationName("");
+    setEditingLocationAddress("");
+    setEditingLocationAddressSelection(undefined);
   };
 
   const saveLocationRename = async () => {
@@ -391,9 +434,34 @@ export default function ClientsPage() {
     setIsSavingLocationEdit(true);
     setLoadError(null);
 
+    const existingLocation = clients
+      .flatMap((client) => client.locations)
+      .find((location) => location.id === editingLocationId);
+
+    const updatePayload: {
+      name: string;
+      address?: string | null;
+      latitude?: number | null;
+      longitude?: number | null;
+    } = { name: trimmedName };
+
+    if (editingLocationAddressSelection === undefined) {
+      updatePayload.address = existingLocation?.address ?? null;
+      updatePayload.latitude = existingLocation?.latitude ?? null;
+      updatePayload.longitude = existingLocation?.longitude ?? null;
+    } else if (editingLocationAddressSelection === null) {
+      updatePayload.address = null;
+      updatePayload.latitude = null;
+      updatePayload.longitude = null;
+    } else {
+      updatePayload.address = editingLocationAddressSelection.address;
+      updatePayload.latitude = editingLocationAddressSelection.latitude;
+      updatePayload.longitude = editingLocationAddressSelection.longitude;
+    }
+
     const { error } = await supabase
       .from("locations")
-      .update({ name: trimmedName })
+      .update(updatePayload)
       .eq("id", editingLocationId);
 
     setIsSavingLocationEdit(false);
@@ -646,6 +714,8 @@ export default function ClientsPage() {
                       onClick={() => {
                         setAddingLocationClientId(client.id);
                         setInlineLocationName("");
+                        setInlineLocationAddress("");
+                        setInlineLocationAddressSelection(null);
                         cancelEditLocation();
                       }}
                       className="text-xs font-semibold text-emerald-600 transition hover:text-emerald-700"
@@ -665,14 +735,28 @@ export default function ClientsPage() {
                         className="flex flex-col gap-2 rounded-lg border border-slate-100 bg-[#f7fafa] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                       >
                         {editingLocationId === location.id ? (
-                          <>
-                            <input
-                              type="text"
-                              value={editingLocationName}
-                              onChange={(event) => setEditingLocationName(event.target.value)}
-                              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                            />
-                            <div className="flex items-center gap-2">
+                          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex w-full flex-col gap-2">
+                              <input
+                                type="text"
+                                value={editingLocationName}
+                                onChange={(event) => setEditingLocationName(event.target.value)}
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                placeholder="Location name"
+                              />
+                              <div>
+                                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Address (optional)
+                                </label>
+                                <LocationAddressField
+                                  value={editingLocationAddress}
+                                  onValueChange={setEditingLocationAddress}
+                                  onSelectionChange={setEditingLocationAddressSelection}
+                                  placeholder="123 Main St, City, State"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 sm:shrink-0">
                               <button
                                 type="button"
                                 onClick={() => void saveLocationRename()}
@@ -689,10 +773,15 @@ export default function ClientsPage() {
                                 Cancel
                               </button>
                             </div>
-                          </>
+                          </div>
                         ) : (
                           <>
-                            <p className="text-sm font-medium text-slate-900">{location.name}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-900">{location.name}</p>
+                              {location.address ? (
+                                <p className="mt-0.5 text-xs text-slate-500">{location.address}</p>
+                              ) : null}
+                            </div>
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
@@ -718,7 +807,7 @@ export default function ClientsPage() {
                 )}
 
                 {addingLocationClientId === client.id ? (
-                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-[#f7fafa] p-3 sm:flex-row sm:items-center">
+                  <div className="mt-3 flex flex-col gap-3 rounded-lg border border-dashed border-slate-300 bg-[#f7fafa] p-3">
                     <input
                       type="text"
                       value={inlineLocationName}
@@ -726,6 +815,17 @@ export default function ClientsPage() {
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                       placeholder="Location name"
                     />
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Address (optional)
+                      </label>
+                      <LocationAddressField
+                        value={inlineLocationAddress}
+                        onValueChange={setInlineLocationAddress}
+                        onSelectionChange={setInlineLocationAddressSelection}
+                        placeholder="123 Main St, City, State"
+                      />
+                    </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"

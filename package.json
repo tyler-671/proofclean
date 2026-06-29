@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@mapbox/search-js-react": "^1.5.1",
     "@stripe/stripe-js": "^9.2.0",
     "@supabase/supabase-js": "^2.103.3",
     "lucide-react": "^1.14.0",
