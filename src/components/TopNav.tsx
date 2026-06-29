@@ -14,7 +14,6 @@ const supabase =
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
-  { href: "/locations", label: "Locations" },
   { href: "/cleaners", label: "Cleaners" },
 ];
 
