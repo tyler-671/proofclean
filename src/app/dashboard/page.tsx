@@ -61,16 +61,15 @@ type DashboardJob = {
   notes: string | null;
 };
 
+type ClientOption = {
+  id: string;
+  name: string;
+};
+
 type LocationOption = {
   id: string;
   name: string;
-  clientName: string;
-};
-
-type LocationRow = {
-  id: string;
-  name: string;
-  clients: { name: string } | { name: string }[] | null;
+  client_id: string;
 };
 
 type CleanerOption = {
@@ -121,8 +120,10 @@ export default function DashboardPage() {
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
+  const [clients, setClients] = useState<ClientOption[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [cleaners, setCleaners] = useState<CleanerOption[]>([]);
+  const [clientId, setClientId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [cleanerId, setCleanerId] = useState("");
   const [jobStatus, setJobStatus] = useState<DbJobStatus>("pending");
@@ -135,6 +136,10 @@ export default function DashboardPage() {
   const [reassigningJobId, setReassigningJobId] = useState<string | null>(null);
   const [reassignSelectedCleanerId, setReassignSelectedCleanerId] = useState("");
   const [isSavingReassign, setIsSavingReassign] = useState(false);
+  const [editingLocationJobId, setEditingLocationJobId] = useState<string | null>(null);
+  const [editClientId, setEditClientId] = useState("");
+  const [editLocationId, setEditLocationId] = useState("");
+  const [isSavingLocationEdit, setIsSavingLocationEdit] = useState(false);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [editingNotesJobId, setEditingNotesJobId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
@@ -149,6 +154,7 @@ export default function DashboardPage() {
     isAddJobOpen ||
     editingNotesJobId !== null ||
     reassigningJobId !== null ||
+    editingLocationJobId !== null ||
     isSubmittingJob ||
     isSavingReassign ||
     savingNotesJobId !== null ||
@@ -179,6 +185,22 @@ export default function DashboardPage() {
       { label: "Clients notified", value: String(completeJobsToday) },
     ];
   }, [jobs]);
+
+  const addFormLocations = useMemo(
+    () =>
+      locations
+        .filter((location) => location.client_id === clientId)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })),
+    [locations, clientId],
+  );
+
+  const editFormLocations = useMemo(
+    () =>
+      locations
+        .filter((location) => location.client_id === editClientId)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })),
+    [locations, editClientId],
+  );
 
   const fetchJobs = useCallback(async (isBackground = false) => {
     if (!supabase) {
@@ -228,9 +250,25 @@ export default function DashboardPage() {
       }
     }
 
+    const { data: clientsData, error: clientsError } = await supabase
+      .from("clients")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true });
+
+    if (clientsError) {
+      if (!isBackground) {
+        setJobsError(clientsError.message);
+        setIsLoadingJobs(false);
+      }
+      return;
+    }
+
+    setClients((clientsData as ClientOption[]) ?? []);
+
     const { data: locationsData, error: locationsError } = await supabase
       .from("locations")
-      .select("id, name, clients(name)")
+      .select("id, name, client_id")
       .eq("user_id", user.id)
       .order("name", { ascending: true });
 
@@ -242,31 +280,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const mappedLocations: LocationOption[] = (((locationsData ?? []) as LocationRow[]).map(
-      (location) => ({
-      id: location.id,
-      name: location.name,
-      clientName: Array.isArray(location.clients)
-        ? (location.clients[0]?.name ?? "Unknown client")
-        : (location.clients?.name ?? "Unknown client"),
-      }),
-    ));
-
-    mappedLocations.sort((a, b) => {
-      const clientCompare = a.clientName.localeCompare(b.clientName);
-      if (clientCompare !== 0) return clientCompare;
-
-      // Word-starting locations come before number-starting ones
-      const aStartsWithLetter = /^[a-z]/i.test(a.name);
-      const bStartsWithLetter = /^[a-z]/i.test(b.name);
-      if (aStartsWithLetter && !bStartsWithLetter) return -1;
-      if (!aStartsWithLetter && bStartsWithLetter) return 1;
-
-      // Both same type: natural sort (so "5th" < "17th", and letters sort A-Z)
-      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
-    });
-
-    setLocations(mappedLocations);
+    setLocations((locationsData as LocationOption[]) ?? []);
 
     const { data: cleanersData, error: cleanersError } = await supabase
       .from("cleaners")
@@ -415,6 +429,12 @@ export default function DashboardPage() {
       setAddJobError("Please select a location.");
       return;
     }
+
+    const selectedLocation = locations.find((location) => location.id === locationId);
+    if (!selectedLocation) {
+      setAddJobError("Please select a valid location.");
+      return;
+    }
     if (!cleanerId) {
       setAddJobError("Please select a cleaner.");
       return;
@@ -440,7 +460,7 @@ export default function DashboardPage() {
     const { error } = await supabase.from("jobs").insert({
       user_id: user.id,
       location_id: locationId,
-      location_name: locations.find((location) => location.id === locationId)?.name ?? "",
+      location_name: selectedLocation.name,
       cleaner_id: cleanerId,
       cleaner_name: selectedCleanerName,
       status: jobStatus,
@@ -454,6 +474,7 @@ export default function DashboardPage() {
       return;
     }
 
+    setClientId("");
     setLocationId("");
     setCleanerId("");
     setJobStatus("pending");
@@ -461,6 +482,39 @@ export default function DashboardPage() {
     setNotes("");
     setIsAddJobOpen(false);
     setIsSubmittingJob(false);
+    await fetchJobs();
+  };
+
+  const saveJobLocation = async () => {
+    if (!supabase || !editingLocationJobId || !editLocationId) return;
+
+    const selectedLocation = locations.find((location) => location.id === editLocationId);
+    if (!selectedLocation) {
+      setJobsError("Please select a valid location.");
+      return;
+    }
+
+    setIsSavingLocationEdit(true);
+    setJobsError(null);
+
+    const { error } = await supabase
+      .from("jobs")
+      .update({
+        location_id: editLocationId,
+        location_name: selectedLocation.name,
+      })
+      .eq("id", editingLocationJobId);
+
+    if (error) {
+      setJobsError(error.message);
+      setIsSavingLocationEdit(false);
+      return;
+    }
+
+    setEditingLocationJobId(null);
+    setEditClientId("");
+    setEditLocationId("");
+    setIsSavingLocationEdit(false);
     await fetchJobs();
   };
 
@@ -690,8 +744,9 @@ export default function DashboardPage() {
               onClick={() => {
                 setIsAddJobOpen((prev) => !prev);
                 setAddJobError(null);
-                if (!isAddJobOpen && locations.length > 0) {
-                  setLocationId(locations[0].id);
+                if (!isAddJobOpen) {
+                  setClientId(clients[0]?.id ?? "");
+                  setLocationId("");
                 }
               }}
               className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
@@ -705,7 +760,36 @@ export default function DashboardPage() {
               onSubmit={onAddJobSubmit}
               className="mt-4 rounded-2xl border border-slate-200 bg-white p-5"
             >
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label
+                    htmlFor="clientId"
+                    className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                  >
+                    Client
+                  </label>
+                  <select
+                    id="clientId"
+                    name="clientId"
+                    required
+                    value={clientId}
+                    onChange={(event) => {
+                      setClientId(event.target.value);
+                      setLocationId("");
+                    }}
+                    disabled={clients.length === 0}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="" disabled>
+                      Select a client
+                    </option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label
                     htmlFor="locationId"
@@ -719,14 +803,30 @@ export default function DashboardPage() {
                     required
                     value={locationId}
                     onChange={(event) => setLocationId(event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    disabled={!clientId || addFormLocations.length === 0}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {locations.map((location) => (
+                    <option value="" disabled>
+                      {clientId ? "Select a location" : "Select a client first"}
+                    </option>
+                    {addFormLocations.map((location) => (
                       <option key={location.id} value={location.id}>
-                        {location.clientName} - {location.name}
+                        {location.name}
                       </option>
                     ))}
                   </select>
+                  {clientId && addFormLocations.length === 0 ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      This client has no locations yet. Add one on the{" "}
+                      <Link
+                        href="/clients"
+                        className="font-semibold text-emerald-700 hover:text-emerald-800"
+                      >
+                        Clients
+                      </Link>{" "}
+                      page.
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <label
@@ -825,11 +925,11 @@ export default function DashboardPage() {
                 <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
                   Could not add job: {addJobError}
                 </p>
-              ) : locations.length === 0 ? (
+              ) : clients.length === 0 ? (
                 <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-                  Add a location first.{" "}
-                  <Link href="/locations" className="font-semibold text-emerald-700 hover:text-emerald-800">
-                    Go to Locations
+                  Add a client first.{" "}
+                  <Link href="/clients" className="font-semibold text-emerald-700 hover:text-emerald-800">
+                    Go to Clients
                   </Link>
                   .
                 </p>
@@ -841,6 +941,7 @@ export default function DashboardPage() {
                     setIsAddJobOpen(false);
                     setAddJobError(null);
                     setJobDate(getTodayDateInputValue());
+                    setClientId("");
                     setLocationId("");
                     setCleanerId("");
                   }}
@@ -851,7 +952,11 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   disabled={
-                    isSubmittingJob || locations.length === 0 || cleaners.length === 0
+                    isSubmittingJob ||
+                    clients.length === 0 ||
+                    !clientId ||
+                    !locationId ||
+                    cleaners.length === 0
                   }
                   className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -904,9 +1009,32 @@ export default function DashboardPage() {
                         {job.status !== "Complete" ? (
                           <button
                             type="button"
+                            aria-label="Edit location"
+                            onClick={() => {
+                              setOpenStatusMenuJobId(null);
+                              setReassigningJobId(null);
+                              setReassignSelectedCleanerId("");
+                              const currentLocation = locations.find(
+                                (location) => location.id === job.locationId,
+                              );
+                              setEditingLocationJobId(job.id);
+                              setEditClientId(currentLocation?.client_id ?? "");
+                              setEditLocationId(job.locationId ?? "");
+                            }}
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                          >
+                            Edit location
+                          </button>
+                        ) : null}
+                        {job.status !== "Complete" ? (
+                          <button
+                            type="button"
                             aria-label="Reassign cleaner"
                             onClick={() => {
                               setOpenStatusMenuJobId(null);
+                              setEditingLocationJobId(null);
+                              setEditClientId("");
+                              setEditLocationId("");
                               setReassigningJobId(job.id);
                               setReassignSelectedCleanerId("");
                             }}
@@ -1002,6 +1130,96 @@ export default function DashboardPage() {
                               </div>
                             </div>
                           )}
+                        </div>
+                      ) : null}
+                      {editingLocationJobId === job.id ? (
+                        <div className="rounded-lg border border-slate-200 bg-white p-3">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                              <label
+                                htmlFor={`edit-client-${job.id}`}
+                                className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                              >
+                                Client
+                              </label>
+                              <select
+                                id={`edit-client-${job.id}`}
+                                value={editClientId}
+                                onChange={(event) => {
+                                  setEditClientId(event.target.value);
+                                  setEditLocationId("");
+                                }}
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                              >
+                                <option value="" disabled>
+                                  Select a client
+                                </option>
+                                {clients.map((client) => (
+                                  <option key={client.id} value={client.id}>
+                                    {client.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label
+                                htmlFor={`edit-location-${job.id}`}
+                                className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                              >
+                                Location
+                              </label>
+                              <select
+                                id={`edit-location-${job.id}`}
+                                value={editLocationId}
+                                onChange={(event) => setEditLocationId(event.target.value)}
+                                disabled={!editClientId || editFormLocations.length === 0}
+                                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <option value="" disabled>
+                                  {editClientId ? "Select a location" : "Select a client first"}
+                                </option>
+                                {editFormLocations.map((location) => (
+                                  <option key={location.id} value={location.id}>
+                                    {location.name}
+                                  </option>
+                                ))}
+                              </select>
+                              {editClientId && editFormLocations.length === 0 ? (
+                                <p className="mt-2 text-xs text-slate-500">
+                                  This client has no locations yet. Add one on the{" "}
+                                  <Link
+                                    href="/clients"
+                                    className="font-semibold text-emerald-700 hover:text-emerald-800"
+                                  >
+                                    Clients
+                                  </Link>{" "}
+                                  page.
+                                </p>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={isSavingLocationEdit || !editClientId || !editLocationId}
+                              onClick={() => void saveJobLocation()}
+                              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isSavingLocationEdit ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isSavingLocationEdit}
+                              onClick={() => {
+                                setEditingLocationJobId(null);
+                                setEditClientId("");
+                                setEditLocationId("");
+                              }}
+                              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
                       ) : null}
                     </div>
@@ -1100,15 +1318,31 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                  ) : job.notes?.trim() ? (
+                  ) : (
                     <div className="mt-3 w-full border-t border-slate-100 pt-3">
                       <div className="flex items-start gap-2">
-                        <StickyNote
-                          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
-                          aria-hidden
-                        />
+                        {job.notes?.trim() ? (
+                          <StickyNote
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400"
+                            aria-hidden
+                          />
+                        ) : null}
                         <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
-                          <p className="whitespace-pre-wrap text-sm text-slate-600">{job.notes}</p>
+                          {job.notes?.trim() ? (
+                            <p className="whitespace-pre-wrap text-sm text-slate-600">{job.notes}</p>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingNotesJobId(job.id);
+                                setNotesDraft("");
+                              }}
+                              className="inline-flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-700"
+                            >
+                              <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              + Add notes
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => {
@@ -1122,18 +1356,6 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingNotesJobId(job.id);
-                        setNotesDraft(job.notes ?? "");
-                      }}
-                      className="mt-3 inline-flex items-center gap-1 text-xs text-slate-500 transition-colors hover:text-slate-700"
-                    >
-                      <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      + Add notes
-                    </button>
                   )}
                 </div>
               ))
