@@ -8,6 +8,7 @@ import {
   ArrowRightStartOnRectangleIcon,
   Bars3Icon,
   Cog6ToothIcon,
+  MapPinIcon,
   Squares2X2Icon,
   UserIcon,
   UsersIcon,
@@ -25,6 +26,7 @@ const settingsItem = { href: "/settings", label: "Settings", icon: Cog6ToothIcon
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Squares2X2Icon },
   { href: "/clients", label: "Clients", icon: UsersIcon },
+  { href: "/map", label: "Map", icon: MapPinIcon },
   { href: "/cleaners", label: "Cleaners", icon: UserIcon },
 ];
 

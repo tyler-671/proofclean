@@ -25,3 +25,25 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Mapbox popup close button — larger hit area and clearer affordance */
+.mapboxgl-popup-close-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 700;
+  color: #1e293b;
+  border-radius: 8px;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.mapboxgl-popup-close-button:hover,
+.mapboxgl-popup-close-button:focus {
+  background-color: #f7fafa;
+  color: #10b981;
+  outline: none;
+}
