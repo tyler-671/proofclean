@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { Copy, Check, Power, RefreshCw, Trash2, MoreHorizontal } from "lucide-react";
+import { Copy, Check, Power, Pencil, RefreshCw, Trash2, MoreHorizontal } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -11,7 +11,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          fetch: (url, options = {}) => fetch(url, { ...options, cache: "no-store" }),
+        },
+      })
+    : null;
 
 type Cleaner = {
   id: string;
@@ -69,6 +75,12 @@ export default function CleanersPage() {
   const [copiedCleanerId, setCopiedCleanerId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+
+  const [editingCleanerId, setEditingCleanerId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   // Close the ••• menu when clicking outside
   useEffect(() => {
     if (!openMenuId) return;
@@ -178,6 +190,64 @@ export default function CleanersPage() {
     setName("");
     setPhone("");
     setIsSubmitting(false);
+    await fetchCleaners();
+  };
+
+  const startEdit = (cleaner: Cleaner) => {
+    setEditingCleanerId(cleaner.id);
+    setEditName(cleaner.name);
+    setEditPhone(cleaner.phone ?? "");
+    setEditError(null);
+    setOpenMenuId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingCleanerId(null);
+    setEditName("");
+    setEditPhone("");
+    setEditError(null);
+  };
+
+  const saveEdit = async (cleaner: Cleaner) => {
+    if (!supabase) {
+      setEditError("Supabase environment variables are missing.");
+      return;
+    }
+
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setEditError("Name is required.");
+      return;
+    }
+
+    setIsSavingEdit(true);
+    setEditError(null);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setEditError(userError?.message ?? "Could not verify authenticated user.");
+      setIsSavingEdit(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("cleaners")
+      .update({ name: trimmedName, phone: editPhone.trim() || null })
+      .eq("id", cleaner.id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      setEditError(error.message);
+      setIsSavingEdit(false);
+      return;
+    }
+
+    setIsSavingEdit(false);
+    cancelEdit();
     await fetchCleaners();
   };
 
@@ -403,6 +473,70 @@ it gives access to your assigned jobs.`;
                 key={cleaner.id}
                 className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6"
               >
+                {editingCleanerId === cleaner.id ? (
+                  <div className="flex flex-col gap-4">
+                    <p className="text-sm font-semibold text-slate-900">Edit cleaner</p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label
+                          htmlFor={`edit-name-${cleaner.id}`}
+                          className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                        >
+                          Name
+                        </label>
+                        <input
+                          id={`edit-name-${cleaner.id}`}
+                          type="text"
+                          required
+                          value={editName}
+                          onChange={(event) => setEditName(event.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          placeholder="Jordan Lee"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          htmlFor={`edit-phone-${cleaner.id}`}
+                          className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                        >
+                          Phone (Optional)
+                        </label>
+                        <input
+                          id={`edit-phone-${cleaner.id}`}
+                          type="tel"
+                          value={editPhone}
+                          onChange={(event) => setEditPhone(event.target.value)}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          placeholder="(555) 123-4567"
+                        />
+                      </div>
+                    </div>
+                    {editError ? (
+                      <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                        {editError}
+                      </p>
+                    ) : null}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void saveEdit(cleaner)}
+                        disabled={isSavingEdit || !editName.trim()}
+                        className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {isSavingEdit ? "Saving..." : "Save changes"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        disabled={isSavingEdit}
+                        className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                <>
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div className="min-w-0">
                     <p className="truncate text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
@@ -497,6 +631,15 @@ it gives access to your assigned jobs.`;
                       <button
                         type="button"
                         role="menuitem"
+                        onClick={() => startEdit(cleaner)}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
                         onClick={() => {
                           setOpenMenuId(null);
                           onRegenerateLink(cleaner);
@@ -526,6 +669,8 @@ it gives access to your assigned jobs.`;
                   )}
                 </div>
               </div>
+                </>
+                )}
               </div>
             ))
           )}
