@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
+import { X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import type { AddressSelection } from "@/components/LocationAddressField";
@@ -12,6 +13,13 @@ const LocationAddressField = dynamic(() => import("@/components/LocationAddressF
   ssr: false,
   loading: () => (
     <div className="h-10 w-full animate-pulse rounded-lg border border-slate-200 bg-slate-50" />
+  ),
+});
+
+const ClientLocationsMap = dynamic(() => import("@/components/ClientLocationsMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full animate-pulse rounded-2xl border border-slate-200 bg-slate-100" />
   ),
 });
 
@@ -88,6 +96,7 @@ export default function ClientsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null);
+  const [mapClient, setMapClient] = useState<Client | null>(null);
 
   const [addingLocationClientId, setAddingLocationClientId] = useState<string | null>(null);
   const [inlineLocationName, setInlineLocationName] = useState("");
@@ -175,6 +184,17 @@ export default function ClientsPage() {
   useEffect(() => {
     void fetchClients();
   }, [fetchClients]);
+
+  useEffect(() => {
+    if (!mapClient) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMapClient(null);
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [mapClient]);
 
   const resetDraftLocations = () => {
     setDraftLocationNames([""]);
@@ -676,15 +696,19 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <span
-                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                  <button
+                    type="button"
+                    onClick={() => setMapClient(client)}
+                    disabled={client.locations.length === 0}
+                    aria-label={`View ${client.name} locations on map`}
+                    className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
                       client.locations.length >= 1
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-gray-100 text-gray-600"
+                        ? "cursor-pointer bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                        : "cursor-not-allowed bg-gray-100 text-gray-600"
                     }`}
                   >
                     {locationCountLabel(client.locations.length)}
-                  </span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => openEditForm(client)}
@@ -860,6 +884,39 @@ export default function ClientsPage() {
         confirmLabel={pendingConfirm?.confirmLabel}
         destructive={pendingConfirm?.destructive}
       />
+
+      {mapClient ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 font-[family-name:var(--font-geist-sans)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${mapClient.name} locations map`}
+          onClick={() => setMapClient(null)}
+        >
+          <div
+            className="flex h-[80vh] max-h-[720px] w-full max-w-3xl flex-col rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-semibold text-slate-900">{mapClient.name}</h2>
+                <p className="mt-0.5 text-sm text-slate-600">Locations map</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMapClient(null)}
+                className="rounded-lg p-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1">
+              <ClientLocationsMap locations={mapClient.locations} />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 }
