@@ -21,6 +21,70 @@ function getStripeCustomerId(
   return customer.id;
 }
 
+function normalizeReferralCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toUpperCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+// Stamp the salesperson's referral code (stored in the user's auth metadata at
+// sign-up) onto the subscription row. Only sets it when the current value is
+// null so renewals never clobber existing attribution. Never throws.
+async function stampReferralCode(
+  supabase: SupabaseClient,
+  stripeCustomerId: string,
+): Promise<void> {
+  try {
+    const { data: row, error } = await supabase
+      .from("subscriptions")
+      .select("user_id, referral_code")
+      .eq("stripe_customer_id", stripeCustomerId)
+      .maybeSingle();
+
+    if (error || !row || !row.user_id || row.referral_code) {
+      return;
+    }
+
+    const { data: userData, error: userError } =
+      await supabase.auth.admin.getUserById(row.user_id);
+
+    if (userError || !userData?.user) {
+      return;
+    }
+
+    const referralCode = normalizeReferralCode(
+      userData.user.user_metadata?.referral_code,
+    );
+
+    if (!referralCode) {
+      return;
+    }
+
+    const { error: updateError } = await supabase
+      .from("subscriptions")
+      .update({ referral_code: referralCode })
+      .eq("stripe_customer_id", stripeCustomerId)
+      .is("referral_code", null);
+
+    if (updateError) {
+      console.error(
+        `Stripe webhook: failed to stamp referral_code for customer ${stripeCustomerId}:`,
+        updateError,
+      );
+      return;
+    }
+
+    console.log(
+      `Stripe webhook: stamped referral_code for customer ${stripeCustomerId}`,
+    );
+  } catch (err) {
+    console.error(
+      `Stripe webhook: unexpected error stamping referral_code for customer ${stripeCustomerId}:`,
+      err,
+    );
+  }
+}
+
 async function updateSubscriptionStatus(
   supabase: SupabaseClient,
   stripeCustomerId: string,
@@ -116,6 +180,8 @@ export async function POST(req: NextRequest) {
         if (result === "error") {
           return NextResponse.json({ error: "Database update failed" }, { status: 500 });
         }
+
+        await stampReferralCode(supabase, stripeCustomerId);
 
         return NextResponse.json({ received: true });
       }

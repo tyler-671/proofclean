@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -6,12 +8,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const noStoreFetch = {
+  global: {
+    fetch: (url: RequestInfo | URL, options: RequestInit = {}) =>
+      fetch(url, { ...options, cache: "no-store" }),
+  },
+};
+
 const getSupabaseAnonClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     return null;
   }
 
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient(supabaseUrl, supabaseAnonKey, noStoreFetch);
 };
 
 const getSupabaseServiceRoleClient = () => {
@@ -19,8 +28,14 @@ const getSupabaseServiceRoleClient = () => {
     return null;
   }
 
-  return createClient(supabaseUrl, supabaseServiceRoleKey);
+  return createClient(supabaseUrl, supabaseServiceRoleKey, noStoreFetch);
 };
+
+function normalizeReferralCode(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toUpperCase();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 export async function POST(request: Request) {
   try {
@@ -85,14 +100,34 @@ export async function POST(request: Request) {
           ? session.customer.id
           : null;
 
-    const { error: upsertError } = await supabaseService.from("subscriptions").upsert(
-      {
-        user_id: user.id,
-        stripe_customer_id: stripeCustomerId,
-        status: "active",
-      },
-      { onConflict: "user_id" },
-    );
+    const referralCode = normalizeReferralCode(user.user_metadata?.referral_code);
+
+    const { data: existingSubscription } = await supabaseService
+      .from("subscriptions")
+      .select("referral_code")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const upsertPayload: {
+      user_id: string;
+      stripe_customer_id: string | null;
+      status: string;
+      referral_code?: string;
+    } = {
+      user_id: user.id,
+      stripe_customer_id: stripeCustomerId,
+      status: "active",
+    };
+
+    // Only stamp attribution on creation or when the existing value is null;
+    // never overwrite an existing non-null referral_code.
+    if (referralCode && !existingSubscription?.referral_code) {
+      upsertPayload.referral_code = referralCode;
+    }
+
+    const { error: upsertError } = await supabaseService
+      .from("subscriptions")
+      .upsert(upsertPayload, { onConflict: "user_id" });
 
     if (upsertError) {
       return NextResponse.json({ error: upsertError.message }, { status: 500 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -21,9 +21,17 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"error" | "success" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) {
+      setReferralCode(ref.trim().toUpperCase());
+    }
+  }, []);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,9 +58,14 @@ export default function SignupPage() {
     setStatusType(null);
     setStatusMessage("");
 
+    const trimmedReferral = referralCode.trim().toUpperCase();
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: trimmedReferral
+        ? { data: { referral_code: trimmedReferral } }
+        : undefined,
     });
 
     if (error) {
@@ -181,6 +194,26 @@ export default function SignupPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   placeholder="Re-enter your password"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="referralCode"
+                  className="mb-1.5 block text-sm font-medium text-slate-700"
+                >
+                  Referral code (optional)
+                </label>
+                <input
+                  id="referralCode"
+                  name="referralCode"
+                  type="text"
+                  autoComplete="off"
+                  value={referralCode}
+                  onChange={(event) =>
+                    setReferralCode(event.target.value.toUpperCase())
+                  }
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  placeholder="e.g. MOM01"
                 />
               </div>
               {statusMessage ? (
