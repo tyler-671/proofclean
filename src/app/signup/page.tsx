@@ -16,20 +16,51 @@ const supabase =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
+const REFERRAL_STORAGE_KEY = "proofclean_ref";
+
+function normalizeReferralCode(value: string | null | undefined): string {
+  return (value ?? "").trim().toUpperCase();
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [lockedReferralCode, setLockedReferralCode] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState<"error" | "success" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get("ref");
-    if (ref) {
-      setReferralCode(ref.trim().toUpperCase());
+    if (typeof window === "undefined") return;
+
+    const fromUrl = normalizeReferralCode(
+      new URLSearchParams(window.location.search).get("ref"),
+    );
+
+    if (fromUrl) {
+      try {
+        window.sessionStorage.setItem(REFERRAL_STORAGE_KEY, fromUrl);
+      } catch {
+        // sessionStorage may be unavailable (private mode / blocked) — ignore.
+      }
+      setLockedReferralCode(fromUrl);
+      return;
+    }
+
+    let fromStorage = "";
+    try {
+      fromStorage = normalizeReferralCode(
+        window.sessionStorage.getItem(REFERRAL_STORAGE_KEY),
+      );
+    } catch {
+      fromStorage = "";
+    }
+
+    if (fromStorage) {
+      setLockedReferralCode(fromStorage);
     }
   }, []);
 
@@ -58,13 +89,14 @@ export default function SignupPage() {
     setStatusType(null);
     setStatusMessage("");
 
-    const trimmedReferral = referralCode.trim().toUpperCase();
+    const effectiveReferral =
+      lockedReferralCode || normalizeReferralCode(referralCode);
 
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: trimmedReferral
-        ? { data: { referral_code: trimmedReferral } }
+      options: effectiveReferral
+        ? { data: { referral_code: effectiveReferral } }
         : undefined,
     });
 
@@ -73,6 +105,14 @@ export default function SignupPage() {
       setStatusMessage(error.message);
       setIsSubmitting(false);
       return;
+    }
+
+    // Clear the stored referral so a later, unrelated signup on this browser
+    // isn't wrongly attributed.
+    try {
+      window.sessionStorage.removeItem(REFERRAL_STORAGE_KEY);
+    } catch {
+      // ignore
     }
 
     if (data.session) {
@@ -196,26 +236,48 @@ export default function SignupPage() {
                   placeholder="Re-enter your password"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="referralCode"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Referral code (optional)
-                </label>
-                <input
-                  id="referralCode"
-                  name="referralCode"
-                  type="text"
-                  autoComplete="off"
-                  value={referralCode}
-                  onChange={(event) =>
-                    setReferralCode(event.target.value.toUpperCase())
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                  placeholder="e.g. MOM01"
-                />
-              </div>
+              {lockedReferralCode ? (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-5 w-5 shrink-0 text-emerald-600"
+                    aria-hidden
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <p className="text-sm font-medium text-slate-700">
+                    Referred by{" "}
+                    <span className="font-bold text-emerald-700">{lockedReferralCode}</span>
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label
+                    htmlFor="referralCode"
+                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                  >
+                    Referral code (optional)
+                  </label>
+                  <input
+                    id="referralCode"
+                    name="referralCode"
+                    type="text"
+                    autoComplete="off"
+                    value={referralCode}
+                    onChange={(event) =>
+                      setReferralCode(event.target.value.toUpperCase())
+                    }
+                    className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    placeholder="e.g. MOM01"
+                  />
+                </div>
+              )}
               {statusMessage ? (
                 <p
                   className={`rounded-lg border px-4 py-3 text-sm font-medium ${
