@@ -676,10 +676,17 @@ export default function ClientsPage() {
         ) : clients.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
             <p className="text-sm font-medium text-slate-600">
-              No clients yet. Click{" "}
-              <span className="font-semibold text-slate-900">+ Add Client</span> to add your first
-              one.
+              No clients yet — add your first client.
             </p>
+            {!isFormOpen ? (
+              <button
+                type="button"
+                onClick={openAddForm}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+              >
+                + Add your first client
+              </button>
+            ) : null}
           </div>
         ) : (
           clients.map((client) => (

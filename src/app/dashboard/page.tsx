@@ -4,9 +4,11 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { CheckCircle2, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import { CheckCircle2, Circle, HelpCircle, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
+
+const ONBOARDING_HIDDEN_KEY = "proofclean_onboarding_hidden";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -148,6 +150,12 @@ export default function DashboardPage() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(
     null,
   );
+  const [totalCleaners, setTotalCleaners] = useState(0);
+  const [onboardingExpanded, setOnboardingExpanded] = useState(false);
+  const [onboardingCollapsing, setOnboardingCollapsing] = useState(false);
+  const onboardingInitializedRef = useRef(false);
+  const onboardingAutoCollapsedRef = useRef(false);
+  const addJobFormRef = useRef<HTMLFormElement | null>(null);
 
   const skipBackgroundRefreshRef = useRef(false);
   skipBackgroundRefreshRef.current =
@@ -201,6 +209,90 @@ export default function DashboardPage() {
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" })),
     [locations, editClientId],
   );
+
+  const onboardingSteps = useMemo(() => {
+    const completedJobExists = jobs.some((job) => job.status === "Complete");
+    return [
+      {
+        id: "client" as const,
+        label: "Add your first client and location",
+        done: clients.length > 0 && locations.length > 0,
+        href: "/clients",
+        cta: "Go to Clients",
+        hint: "A client is the business you clean for. Go to Clients, add one, then add their building's address under it.",
+      },
+      {
+        id: "cleaner" as const,
+        label: "Add a cleaner",
+        done: totalCleaners > 0,
+        href: "/cleaners",
+        cta: "Go to Cleaners",
+        hint: "Add their name on the Cleaners page — they'll get a private link to see their jobs. No app or login needed.",
+      },
+      {
+        id: "job" as const,
+        label: "Create your first job",
+        done: jobs.length > 0,
+        href: null,
+        cta: "Create a job",
+        hint: "Pick the client, their location, a cleaner, and a date — that's a job.",
+      },
+      {
+        id: "complete" as const,
+        label: "Complete a job with photos — your client gets automatic proof",
+        done: completedJobExists,
+        href: "/cleaners",
+        cta: "Copy a cleaner's link",
+        hint: "Send your cleaner their link. They open it on their phone, upload photos, and mark the job done — ProofClean emails your client the proof automatically.",
+      },
+    ];
+  }, [clients.length, locations.length, totalCleaners, jobs]);
+
+  const onboardingDoneCount = onboardingSteps.filter((step) => step.done).length;
+  const onboardingAllComplete = onboardingDoneCount === onboardingSteps.length;
+
+  const openJobForm = useCallback(() => {
+    setIsAddJobOpen(true);
+    setAddJobError(null);
+    setClientId(clients[0]?.id ?? "");
+    setLocationId("");
+    window.setTimeout(() => {
+      addJobFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  }, [clients]);
+
+  const startOnboardingCollapse = useCallback(() => {
+    setOnboardingCollapsing(true);
+  }, []);
+
+  const handleOnboardingTransitionEnd = useCallback(() => {
+    if (onboardingCollapsing) {
+      setOnboardingCollapsing(false);
+      setOnboardingExpanded(false);
+    }
+  }, [onboardingCollapsing]);
+
+  const hideOnboarding = useCallback(() => {
+    try {
+      window.localStorage.setItem(ONBOARDING_HIDDEN_KEY, "1");
+    } catch {
+      // ignore storage errors (private mode / blocked)
+    }
+    startOnboardingCollapse();
+  }, [startOnboardingCollapse]);
+
+  const openOnboarding = useCallback(() => {
+    try {
+      window.localStorage.removeItem(ONBOARDING_HIDDEN_KEY);
+    } catch {
+      // ignore
+    }
+    // Keep the completion auto-collapse guard set when everything is already
+    // done, so reopening a fully-complete checklist stays open.
+    onboardingAutoCollapsedRef.current = onboardingAllComplete;
+    setOnboardingCollapsing(false);
+    setOnboardingExpanded(true);
+  }, [onboardingAllComplete]);
 
   const fetchJobs = useCallback(async (isBackground = false) => {
     if (!supabase) {
@@ -298,6 +390,14 @@ export default function DashboardPage() {
     }
 
     setCleaners((cleanersData ?? []) as CleanerOption[]);
+
+    // Total cleaner count (including inactive) for onboarding detection.
+    const { count: cleanerCount } = await supabase
+      .from("cleaners")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    setTotalCleaners(cleanerCount ?? (cleanersData?.length ?? 0));
 
     const { data, error } = await supabase
       .from("jobs")
@@ -417,6 +517,45 @@ export default function DashboardPage() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [isAuthChecked, fetchJobs]);
+
+  // Initialize the checklist's expanded/collapsed state once data has loaded:
+  // respect the saved "hidden" preference, and start collapsed when everything
+  // is already complete.
+  useEffect(() => {
+    if (onboardingInitializedRef.current) return;
+    if (isLoadingJobs) return;
+
+    onboardingInitializedRef.current = true;
+
+    let hidden = false;
+    try {
+      hidden = window.localStorage.getItem(ONBOARDING_HIDDEN_KEY) === "1";
+    } catch {
+      hidden = false;
+    }
+
+    if (onboardingAllComplete) {
+      onboardingAutoCollapsedRef.current = true;
+      setOnboardingExpanded(false);
+    } else {
+      setOnboardingExpanded(!hidden);
+    }
+  }, [isLoadingJobs, onboardingAllComplete]);
+
+  // When the user finishes the final step during a session, animate the card
+  // into the pill so they see where it went (only auto-collapse once).
+  useEffect(() => {
+    if (!onboardingInitializedRef.current) return;
+    if (
+      onboardingAllComplete &&
+      onboardingExpanded &&
+      !onboardingCollapsing &&
+      !onboardingAutoCollapsedRef.current
+    ) {
+      onboardingAutoCollapsedRef.current = true;
+      startOnboardingCollapse();
+    }
+  }, [onboardingAllComplete, onboardingExpanded, onboardingCollapsing, startOnboardingCollapse]);
 
   const onAddJobSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -706,13 +845,109 @@ export default function DashboardPage() {
   }
   return (
     <AppShell>
-        <section className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Tonight&apos;s operations
-          </h1>
-          <p className="mt-2 text-sm font-medium text-slate-600">
-            Real-time proof of clean, status snapshots, and client-ready updates.
-          </p>
+        {onboardingExpanded ? (
+          <div
+            onTransitionEnd={handleOnboardingTransitionEnd}
+            className={`origin-top-right overflow-hidden transition-all duration-300 ease-out ${
+              onboardingCollapsing
+                ? "mb-0 max-h-0 translate-x-8 -translate-y-4 scale-95 opacity-0"
+                : "mb-8 max-h-[720px] translate-x-0 translate-y-0 scale-100 opacity-100"
+            }`}
+          >
+            <div className="rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold tracking-tight text-slate-900">Get set up</h2>
+                  <p className="mt-1 text-sm font-medium text-slate-600">
+                    A few steps to get the most out of ProofClean.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    {onboardingDoneCount} of {onboardingSteps.length} done
+                  </span>
+                  <button
+                    type="button"
+                    onClick={hideOnboarding}
+                    className="text-sm font-medium text-slate-500 transition hover:text-slate-700"
+                  >
+                    Hide
+                  </button>
+                </div>
+              </div>
+              <ul className="space-y-2">
+                {onboardingSteps.map((step) => (
+                  <li
+                    key={step.id}
+                    className="flex items-start gap-3 rounded-xl border border-slate-100 bg-[#f7fafa] p-3"
+                  >
+                    {step.done ? (
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" aria-hidden />
+                    ) : (
+                      <Circle className="mt-0.5 h-5 w-5 shrink-0 text-slate-300" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-sm font-medium ${
+                          step.done ? "text-slate-500 line-through" : "text-slate-900"
+                        }`}
+                      >
+                        {step.label}
+                      </p>
+                      {!step.done ? (
+                        <p className="mt-1 text-sm text-slate-500">{step.hint}</p>
+                      ) : null}
+                    </div>
+                    {!step.done ? (
+                      step.id === "job" ? (
+                        <button
+                          type="button"
+                          onClick={openJobForm}
+                          className="mt-0.5 shrink-0 rounded-lg border border-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-50"
+                        >
+                          {step.cta}
+                        </button>
+                      ) : (
+                        <Link
+                          href={step.href ?? "/dashboard"}
+                          className="mt-0.5 shrink-0 rounded-lg border border-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-50"
+                        >
+                          {step.cta}
+                        </Link>
+                      )
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : null}
+
+        <section className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Tonight&apos;s operations
+            </h1>
+            <p className="mt-2 text-sm font-medium text-slate-600">
+              Real-time proof of clean, status snapshots, and client-ready updates.
+            </p>
+          </div>
+          <div className="shrink-0">
+            {!onboardingExpanded ? (
+              <button
+                type="button"
+                onClick={openOnboarding}
+                aria-label="Open getting started checklist"
+                className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-100"
+              >
+                <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
+                Getting started
+                <span className="ml-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                  {onboardingDoneCount}/{onboardingSteps.length}
+                </span>
+              </button>
+            ) : null}
+          </div>
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -757,6 +992,7 @@ export default function DashboardPage() {
 
           {isAddJobOpen ? (
             <form
+              ref={addJobFormRef}
               onSubmit={onAddJobSubmit}
               className="mt-4 rounded-2xl border border-slate-200 bg-white p-5"
             >
@@ -976,8 +1212,18 @@ export default function DashboardPage() {
                 Could not load jobs: {jobsError}
               </div>
             ) : jobs.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-medium text-slate-600">
-                No jobs found yet.
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+                <p className="text-sm font-medium text-slate-600">
+                  No jobs yet — create your first job.
+                </p>
+                <button
+                  type="button"
+                  onClick={openJobForm}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                >
+                  <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                  Create your first job
+                </button>
               </div>
             ) : (
               jobs.map((job) => (
