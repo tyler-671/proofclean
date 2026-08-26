@@ -158,6 +158,7 @@ export default function DashboardPage() {
   const [onboardingCollapsing, setOnboardingCollapsing] = useState(false);
   const onboardingInitializedRef = useRef(false);
   const onboardingAutoCollapsedRef = useRef(false);
+  const onboardingForceOpenRef = useRef(false);
   const addJobFormRef = useRef<HTMLFormElement | null>(null);
 
   const skipBackgroundRefreshRef = useRef(false);
@@ -561,6 +562,35 @@ export default function DashboardPage() {
     setBizSetupSnoozed(true);
   }, []);
 
+  // Detect the "open the checklist" entry point from the side nav
+  // (/dashboard?onboarding=open). Read it on mount (SSR-safe) so the init
+  // effect can force the checklist expanded, then strip the param from the URL
+  // so a refresh doesn't keep re-forcing it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("onboarding") === "open") {
+        onboardingForceOpenRef.current = true;
+        params.delete("onboarding");
+        const query = params.toString();
+        const nextUrl = window.location.pathname + (query ? `?${query}` : "");
+        window.history.replaceState(null, "", nextUrl);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // If the nav item is clicked while already on the dashboard (no remount),
+  // re-open the checklist in response to the dispatched event.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handler = () => openOnboarding();
+    window.addEventListener("proofclean:open-onboarding", handler);
+    return () => window.removeEventListener("proofclean:open-onboarding", handler);
+  }, [openOnboarding]);
+
   // Initialize the checklist's expanded/collapsed state once data has loaded:
   // respect the saved "hidden" preference, and start collapsed when everything
   // is already complete.
@@ -569,6 +599,15 @@ export default function DashboardPage() {
     if (isLoadingJobs) return;
 
     onboardingInitializedRef.current = true;
+
+    // Arriving via the "Getting started" nav item overrides the saved hidden
+    // preference for this view (without permanently changing it) and keeps the
+    // checklist open even when everything is already complete.
+    if (onboardingForceOpenRef.current) {
+      onboardingAutoCollapsedRef.current = true;
+      setOnboardingExpanded(true);
+      return;
+    }
 
     let hidden = false;
     try {

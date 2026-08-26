@@ -9,6 +9,7 @@ import {
   Bars3Icon,
   Cog6ToothIcon,
   MapPinIcon,
+  QuestionMarkCircleIcon,
   Squares2X2Icon,
   UserIcon,
   UsersIcon,
@@ -154,6 +155,29 @@ function SidebarContent({
             forceExpanded
               ? "mx-2 mb-3 border-t border-slate-200"
               : "mx-1 mb-3 border-t border-slate-200 transition-all duration-200 ease-out group-hover:mx-2"
+          }
+        />
+        <Link
+          href="/dashboard?onboarding=open"
+          onClick={() => {
+            // Cover the case where we're already on the dashboard (no remount):
+            // the dashboard listens for this event to re-open the checklist.
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("proofclean:open-onboarding"));
+            }
+            onNavigate?.();
+          }}
+          aria-label="Getting started"
+          className={`${rowClass} text-sm font-medium text-slate-600 hover:bg-slate-50`}
+        >
+          <QuestionMarkCircleIcon className="h-5 w-5 shrink-0" aria-hidden />
+          <span className={labelClass}>Getting started</span>
+        </Link>
+        <div
+          className={
+            forceExpanded
+              ? "mx-2 mb-3 mt-3 border-t border-slate-200"
+              : "mx-1 mb-3 mt-3 border-t border-slate-200 transition-all duration-200 ease-out group-hover:mx-2"
           }
         />
         {(() => {
