@@ -151,6 +151,7 @@ export default function DashboardPage() {
     null,
   );
   const [totalCleaners, setTotalCleaners] = useState(0);
+  const [businessProfileComplete, setBusinessProfileComplete] = useState(false);
   const [onboardingExpanded, setOnboardingExpanded] = useState(false);
   const [onboardingCollapsing, setOnboardingCollapsing] = useState(false);
   const onboardingInitializedRef = useRef(false);
@@ -214,6 +215,14 @@ export default function DashboardPage() {
     const completedJobExists = jobs.some((job) => job.status === "Complete");
     return [
       {
+        id: "business" as const,
+        label: "Add your business name and logo",
+        done: businessProfileComplete,
+        href: "/settings",
+        cta: "Go to Settings",
+        hint: "This brands the proof emails your clients receive — it's what makes your two-person crew look like a real operation.",
+      },
+      {
         id: "client" as const,
         label: "Add your first client and location",
         done: clients.length > 0 && locations.length > 0,
@@ -246,7 +255,7 @@ export default function DashboardPage() {
         hint: "Send your cleaner their link. They open it on their phone, upload photos, and mark the job done — ProofClean emails your client the proof automatically.",
       },
     ];
-  }, [clients.length, locations.length, totalCleaners, jobs]);
+  }, [businessProfileComplete, clients.length, locations.length, totalCleaners, jobs]);
 
   const onboardingDoneCount = onboardingSteps.filter((step) => step.done).length;
   const onboardingAllComplete = onboardingDoneCount === onboardingSteps.length;
@@ -398,6 +407,17 @@ export default function DashboardPage() {
       .eq("user_id", user.id);
 
     setTotalCleaners(cleanerCount ?? (cleanersData?.length ?? 0));
+
+    // Business identity (business name + logo) for onboarding detection.
+    const { data: settingsRow } = await supabase
+      .from("user_settings")
+      .select("business_name, logo_url")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const hasBusinessName = Boolean(settingsRow?.business_name?.trim());
+    const hasLogo = Boolean(settingsRow?.logo_url?.trim());
+    setBusinessProfileComplete(hasBusinessName && hasLogo);
 
     const { data, error } = await supabase
       .from("jobs")
