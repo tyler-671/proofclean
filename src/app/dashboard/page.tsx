@@ -4,11 +4,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { CheckCircle2, Circle, HelpCircle, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, HelpCircle, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
 const ONBOARDING_HIDDEN_KEY = "proofclean_onboarding_hidden";
+const BIZSETUP_SNOOZE_KEY = "proofclean_bizsetup_snooze";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -152,6 +153,7 @@ export default function DashboardPage() {
   );
   const [totalCleaners, setTotalCleaners] = useState(0);
   const [businessProfileComplete, setBusinessProfileComplete] = useState(false);
+  const [bizSetupSnoozed, setBizSetupSnoozed] = useState(false);
   const [onboardingExpanded, setOnboardingExpanded] = useState(false);
   const [onboardingCollapsing, setOnboardingCollapsing] = useState(false);
   const onboardingInitializedRef = useRef(false);
@@ -538,6 +540,27 @@ export default function DashboardPage() {
     };
   }, [isAuthChecked, fetchJobs]);
 
+  // Read the per-session snooze for the business-setup reminder banner.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (window.sessionStorage.getItem(BIZSETUP_SNOOZE_KEY) === "1") {
+        setBizSetupSnoozed(true);
+      }
+    } catch {
+      // sessionStorage may be unavailable (private mode / blocked) — ignore.
+    }
+  }, []);
+
+  const snoozeBizSetup = useCallback(() => {
+    try {
+      window.sessionStorage.setItem(BIZSETUP_SNOOZE_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setBizSetupSnoozed(true);
+  }, []);
+
   // Initialize the checklist's expanded/collapsed state once data has loaded:
   // respect the saved "hidden" preference, and start collapsed when everything
   // is already complete.
@@ -865,6 +888,32 @@ export default function DashboardPage() {
   }
   return (
     <AppShell>
+        {!isLoadingJobs && !businessProfileComplete && !bizSetupSnoozed ? (
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
+              <p className="text-sm font-medium text-amber-800">
+                Finish setting up your business so your proof emails are branded.
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Link
+                href="/settings"
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+              >
+                Set it up now
+              </Link>
+              <button
+                type="button"
+                onClick={snoozeBizSetup}
+                className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+              >
+                Remind me next time I log in
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {onboardingExpanded ? (
           <div
             onTransitionEnd={handleOnboardingTransitionEnd}
