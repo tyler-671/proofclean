@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import { AlertTriangle, CheckCircle2, Circle, HelpCircle, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
+import { CheckCircle2, Circle, HelpCircle, Plus, StickyNote, Trash2, UserCog } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -889,24 +889,50 @@ export default function DashboardPage() {
   return (
     <AppShell>
         {!isLoadingJobs && !businessProfileComplete && !bizSetupSnoozed ? (
-          <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="mb-6 flex flex-col gap-3 font-[family-name:var(--font-geist-sans)] sm:flex-row sm:items-center sm:justify-between"
+            style={{
+              backgroundColor: "#fffbeb",
+              border: "1px solid #fcd34d",
+              borderRadius: "12px",
+              padding: "16px 20px",
+            }}
+          >
             <div className="flex items-start gap-2.5">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
-              <p className="text-sm font-medium text-amber-800">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="#d97706"
+                aria-hidden
+                className="mt-0.5 shrink-0"
+              >
+                <path d="M12 2c.3 3.2 1.4 4.9 3.1 6 1.7 1.1 3.6 1.6 6.9 2-3.3.4-5.2.9-6.9 2-1.7 1.1-2.8 2.8-3.1 6-.3-3.2-1.4-4.9-3.1-6-1.7-1.1-3.6-1.6-6.9-2 3.3-.4 5.2-.9 6.9-2C10.6 6.9 11.7 5.2 12 2z" />
+              </svg>
+              <p
+                className="font-[family-name:var(--font-geist-sans)]"
+                style={{ color: "#92400e", fontWeight: 500, fontSize: "15px" }}
+              >
                 Finish setting up your business so your proof emails are branded.
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2 font-[family-name:var(--font-geist-sans)]">
               <Link
                 href="/settings"
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95"
+                style={{ backgroundColor: "#10b981", borderRadius: "8px" }}
               >
                 Set it up now
               </Link>
               <button
                 type="button"
                 onClick={snoozeBizSetup}
-                className="rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
+                className="rounded-lg bg-transparent px-4 py-2 text-sm font-semibold transition hover:bg-emerald-50"
+                style={{
+                  color: "#10b981",
+                  border: "1.5px solid #10b981",
+                  borderRadius: "8px",
+                }}
               >
                 Remind me next time I log in
               </button>
