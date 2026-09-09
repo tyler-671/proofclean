@@ -191,7 +191,7 @@ export default function DashboardPage() {
     ).length;
 
     return [
-      { label: "Locations tonight", value: String(locationsTonight) },
+      { label: "Locations today", value: String(locationsTonight) },
       { label: "Cleaners active", value: String(cleanersActiveToday) },
       { label: "Jobs complete", value: String(completeJobsToday) },
       { label: "Clients notified", value: String(completeJobsToday) },
