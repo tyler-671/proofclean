@@ -1060,7 +1060,7 @@ export default function DashboardPage() {
         <section className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Tonight&apos;s operations
+              Today&apos;s jobs
             </h1>
             <p className="mt-2 text-sm font-medium text-slate-600">
               Real-time proof of clean, status snapshots, and client-ready updates.
