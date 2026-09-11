@@ -489,6 +489,12 @@ export default function DashboardPage() {
         return bTime - aTime;
       }
 
+      // Active jobs: soonest job_date first, tie-break by newest created first.
+      const aDate = a.jobDate ? new Date(a.jobDate).getTime() : Infinity;
+      const bDate = b.jobDate ? new Date(b.jobDate).getTime() : Infinity;
+      if (aDate !== bDate) {
+        return aDate - bDate;
+      }
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
