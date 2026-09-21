@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Logo from "@/components/Logo";
 import { createClient } from "@supabase/supabase-js";
 import {
   ArrowRightStartOnRectangleIcon,
@@ -30,39 +31,6 @@ const navItems = [
   { href: "/map", label: "Map", icon: MapPinIcon },
   { href: "/cleaners", label: "Cleaners", icon: UserIcon },
 ];
-
-function ProofCleanWordmark() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 220 40"
-      className="h-8 w-auto"
-      aria-label="ProofClean"
-      role="img"
-    >
-      <text
-        x="0"
-        y="30"
-        fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-        fontSize="28"
-        fontWeight="700"
-        fill="#111827"
-      >
-        Proof
-      </text>
-      <text
-        x="76"
-        y="30"
-        fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-        fontSize="28"
-        fontWeight="700"
-        fill="#10b981"
-      >
-        Clean
-      </text>
-    </svg>
-  );
-}
 
 type SidebarContentProps = {
   onNavigate?: () => void;
@@ -103,14 +71,19 @@ function SidebarContent({
           aria-label="ProofClean home"
         >
           {forceExpanded ? (
-            <ProofCleanWordmark />
+            <Logo size="sm" />
           ) : (
             <>
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-base font-bold text-white transition-opacity duration-200 group-hover:hidden">
-                P
+              <span className="flex h-9 w-9 items-center justify-center transition-opacity duration-200 group-hover:hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element -- tiny static brand SVG */}
+                <img
+                  src="/brand/proofclean_mark_onlight.svg"
+                  alt="ProofClean"
+                  className="h-9 w-9"
+                />
               </span>
               <span className="hidden group-hover:block">
-                <ProofCleanWordmark />
+                <Logo size="sm" />
               </span>
             </>
           )}

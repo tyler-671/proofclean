@@ -1,40 +1,12 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 
 export default function AccountDeletedPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#f7fafa] px-4 py-6 font-[family-name:var(--font-geist-sans)] sm:px-6">
       <nav className="mx-auto w-full max-w-6xl">
-        <Link href="/" className="transition hover:opacity-80">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 220 40"
-            className="h-10 w-auto"
-            aria-label="ProofClean"
-            role="img"
-          >
-            <text
-              x="0"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#111827"
-            >
-              Proof
-            </text>
-            <text
-              x="76"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#10b981"
-            >
-              Clean
-            </text>
-          </svg>
-        </Link>
+        <Logo href="/" size="md" />
       </nav>
 
       <div className="flex flex-1 items-center justify-center py-12">

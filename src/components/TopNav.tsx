@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -32,36 +33,7 @@ export default function TopNav() {
   return (
     <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/dashboard" className="transition hover:opacity-80">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 220 40"
-            className="h-10 w-auto"
-            aria-label="ProofClean"
-            role="img"
-          >
-            <text
-              x="0"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#111827"
-            >
-              Proof
-            </text>
-            <text
-              x="76"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#10b981"
-            >
-              Clean
-            </text>
-          </svg>
-        </Link>
+        <Logo href="/dashboard" size="md" />
 
         <div className="flex items-center gap-1">
           {navItems.map((item) => {

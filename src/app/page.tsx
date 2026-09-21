@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Logo from "@/components/Logo";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -130,36 +131,7 @@ export default function LandingPage() {
       {/* Top nav */}
       <header className="w-full overflow-hidden px-4 sm:px-0">
         <nav className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-2 py-5 sm:px-6">
-          <Link href="/" className="min-w-0 shrink transition hover:opacity-80">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 220 40"
-              className="h-7 w-auto max-w-full sm:h-10"
-              aria-label="ProofClean"
-              role="img"
-            >
-              <text
-                x="0"
-                y="30"
-                fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-                fontSize="28"
-                fontWeight="700"
-                fill="#111827"
-              >
-                Proof
-              </text>
-              <text
-                x="76"
-                y="30"
-                fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-                fontSize="28"
-                fontWeight="700"
-                fill="#10b981"
-              >
-                Clean
-              </text>
-            </svg>
-          </Link>
+          <Logo href="/" size="md" className="min-w-0 shrink max-w-full" />
           <div className="flex shrink-0 flex-nowrap items-center gap-1.5 text-xs font-medium sm:gap-2 sm:text-sm">
             <Link
               href="/login"
@@ -180,34 +152,7 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pt-20">
         <div className="mb-10 flex w-full flex-col items-center text-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="-3 0 160 40"
-            className="inline-block h-10 w-auto"
-            aria-label="ProofClean"
-            role="img"
-          >
-            <text
-              x="0"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#111827"
-            >
-              Proof
-            </text>
-            <text
-              x="76"
-              y="30"
-              fontFamily="var(--font-geist-sans), 'Lexend Deca', sans-serif"
-              fontSize="28"
-              fontWeight="700"
-              fill="#10b981"
-            >
-              Clean
-            </text>
-          </svg>
+          <Logo size="md" />
           <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
             Cleaning operations software
           </p>

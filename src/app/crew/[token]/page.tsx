@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import Logo from "@/components/Logo";
 import {
   AlertTriangle,
   Calendar,
@@ -449,7 +450,7 @@ export default function CrewPage() {
     <div className={`min-h-screen bg-slate-50 text-slate-900 ${crewFontClass}`}>
       <header className="bg-emerald-500 py-6 text-white">
         <div className="flex flex-col items-center">
-          <p className="text-2xl font-bold tracking-tight text-white">ProofClean</p>
+          <Logo variant="onDark" size="md" />
         </div>
       </header>
 
