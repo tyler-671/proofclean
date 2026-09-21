@@ -151,14 +151,22 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto w-full max-w-4xl px-4 pb-20 pt-12 text-center sm:px-6 sm:pt-20">
-        <div className="mb-10 flex w-full flex-col items-center text-center">
-          <div className="flex w-full justify-center">
-            <Logo size="md" />
-          </div>
+      <div className="mb-10 flex w-full flex-col items-center text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/proofclean_mark_onlight.svg"
+            alt=""
+            aria-hidden="true"
+            className="h-11 w-auto"
+          />
+          <span className="mt-3 font-[family-name:var(--font-geist-sans)] text-[1.75rem] font-bold leading-none tracking-tight">
+            <span className="text-[#0f172a]">Proof</span>
+            <span className="text-[#10b981]">Clean</span>
+          </span>
           <p className="mt-2 text-xs font-medium uppercase tracking-widest text-slate-500">
             Cleaning operations software
           </p>
-        </div>
+        </div> 
         <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
         Dispatch jobs, organize crews.
         </h1>
