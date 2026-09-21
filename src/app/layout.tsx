@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   description: "Dispatch your cleaning crew and send clients automated photo proof of every clean.",
   manifest: "/manifest.json",
   icons: {
+    // The bolder favicon.ico (src/app/favicon.ico) is emitted automatically by
+    // the App Router file convention. These PNGs add crisp high-DPI variants.
+    icon: [
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
     apple: "/apple-touch-icon.png",
   },
 };
