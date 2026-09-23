@@ -193,6 +193,9 @@ export default function LandingPage() {
             Sign in
           </Link>
         </div>
+        <p className="mt-3 text-center text-sm text-slate-500">
+          Risk-free — cancel within 30 days for a full refund if you&apos;re not completely satisfied
+        </p>
       </section>
 
       {/* Value props */}
@@ -251,6 +254,9 @@ export default function LandingPage() {
           >
             Start your ProofClean account
           </Link>
+          <p className="mt-3 text-center text-sm text-emerald-200/80">
+            Risk-free — cancel within 30 days for a full refund if you&apos;re not completely satisfied
+          </p>
         </div>
       </section>
 
