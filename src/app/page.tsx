@@ -196,6 +196,17 @@ export default function LandingPage() {
         <p className="mt-3 text-center text-sm text-slate-500">
           Risk-free — cancel within 30 days for a full refund if you&apos;re not completely satisfied
         </p>
+        <div className="mx-auto mt-12 w-full max-w-3xl">
+          <div className="relative overflow-hidden rounded-2xl shadow-xl ring-1 ring-slate-200" style={{ paddingTop: "56.25%" }}>
+            <iframe
+              src="https://player.vimeo.com/video/1229929813?title=0&byline=0&portrait=0&dnt=1"
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
+              title="ProofClean product walkthrough"
+            />
+          </div>
+        </div>
       </section>
 
       {/* Value props */}
