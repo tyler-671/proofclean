@@ -386,10 +386,72 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white py-8 text-center">
-        <p className="text-sm text-slate-500">
-          © {new Date().getFullYear()} ProofClean. All rights reserved.
-        </p>
+      <footer className="bg-emerald-950 text-emerald-100/80">
+        <div className="mx-auto w-full max-w-6xl px-4 py-14 sm:px-6">
+          <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-sm">
+              <Logo variant="onDark" size="md" />
+              <p className="mt-4 text-sm text-emerald-100/70">
+                Photo-proof job management for commercial cleaning companies.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 md:gap-12">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Product</h3>
+                <ul className="mt-4 space-y-3 text-sm">
+                  <li>
+                    <Link href="/pricing" className="text-emerald-100/70 transition hover:text-white">
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/login" className="text-emerald-100/70 transition hover:text-white">
+                      Sign in
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/signup" className="text-emerald-100/70 transition hover:text-white">
+                      Get started
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Legal</h3>
+                <ul className="mt-4 space-y-3 text-sm">
+                  <li>
+                    <Link href="/privacy" className="text-emerald-100/70 transition hover:text-white">
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/terms" className="text-emerald-100/70 transition hover:text-white">
+                      Terms of Service
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Contact</h3>
+                <ul className="mt-4 space-y-3 text-sm">
+                  <li>
+                    <a
+                      href="mailto:hello@proofclean.ca"
+                      className="text-emerald-100/70 transition hover:text-white"
+                    >
+                      hello@proofclean.ca
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="mt-12 border-t border-emerald-900 pt-6">
+            <p className="text-sm text-emerald-100/60">
+              © {new Date().getFullYear()} ProofClean. All rights reserved.
+            </p>
+          </div>
+        </div>
       </footer>
     </main>
   );
