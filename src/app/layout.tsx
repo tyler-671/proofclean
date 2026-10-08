@@ -9,8 +9,35 @@ const lexendDeca = Lexend_Deca({
 });
 
 export const metadata: Metadata = {
-  title: "ProofClean",
-  description: "Dispatch your cleaning crew and send clients automated photo proof of every clean.",
+  metadataBase: new URL("https://proofclean.ca"),
+  title: {
+    default: "Commercial Cleaning Software with Photo Proof — ProofClean",
+    template: "%s — ProofClean",
+  },
+  description:
+    "Photo-proof job software for commercial cleaning companies. Dispatch crews, track jobs on a live map, and auto-send clients photo proof. Flat $59/mo, unlimited cleaners & locations.",
+  keywords: [
+    "commercial cleaning software",
+    "janitorial software",
+    "cleaning company software",
+    "proof of cleaning",
+    "photo proof cleaning app",
+    "cleaning crew dispatch",
+  ],
+  openGraph: {
+    title: "Commercial Cleaning Software with Photo Proof — ProofClean",
+    description:
+      "Photo-proof job software for commercial cleaning companies. Dispatch crews, track jobs on a live map, and auto-send clients photo proof. Flat $59/mo, unlimited cleaners & locations.",
+    url: "https://proofclean.ca",
+    siteName: "ProofClean",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProofClean — Commercial Cleaning Software with Photo Proof",
+    description:
+      "Photo-proof job software for commercial cleaning companies. Dispatch crews, track jobs on a live map, and auto-send clients photo proof. Flat $59/mo, unlimited cleaners & locations.",
+  },
   manifest: "/manifest.json",
   icons: {
     // The bolder favicon.ico (src/app/favicon.ico) is emitted automatically by
