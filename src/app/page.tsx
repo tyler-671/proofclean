@@ -128,6 +128,26 @@ export default function LandingPage() {
 
   return (
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            name: "ProofClean",
+            applicationCategory: "BusinessApplication",
+            operatingSystem: "Web",
+            description:
+              "Photo-proof job software for commercial cleaning companies. Dispatch crews, track jobs on a live map, and auto-send clients photo proof. Flat $59/mo, unlimited cleaners & locations.",
+            offers: {
+              "@type": "Offer",
+              price: "59",
+              priceCurrency: "CAD",
+            },
+            url: "https://proofclean.ca",
+          }),
+        }}
+      />
       {/* Top nav */}
       <header className="w-full overflow-hidden px-4 sm:px-0">
         <nav className="mx-auto flex w-full min-w-0 max-w-6xl items-center justify-between gap-2 py-5 sm:px-6">

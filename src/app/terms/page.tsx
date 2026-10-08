@@ -3,8 +3,8 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · ProofClean",
-  description: "The terms that govern your use of ProofClean.",
+  title: "Terms of Service",
+  description: "The terms governing use of ProofClean.",
 };
 
 // Change this single value to update the governing jurisdiction everywhere.

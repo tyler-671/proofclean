@@ -3,9 +3,8 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · ProofClean",
-  description:
-    "How ProofClean collects, uses, and protects your data.",
+  title: "Privacy Policy",
+  description: "How ProofClean collects, uses, and protects your data.",
 };
 
 export default function PrivacyPage() {
