@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Lexend_Deca } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const lexendDeca = Lexend_Deca({
@@ -63,6 +64,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${lexendDeca.variable} antialiased`}>
         {children}
+        <Analytics />
       </body>
     </html>
   );
