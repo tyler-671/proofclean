@@ -5,6 +5,14 @@ import Logo from "@/components/Logo";
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The terms governing use of ProofClean.",
+  alternates: { canonical: "/terms" },
+  openGraph: {
+    title: "Terms of Service — ProofClean",
+    description: "The terms governing use of ProofClean.",
+    url: "/terms",
+    siteName: "ProofClean",
+    type: "website",
+  },
 };
 
 // Change this single value to update the governing jurisdiction everywhere.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,6 +16,7 @@ const supabase =
  * useSearchParams here), so the button stays in the server-rendered output.
  */
 export default function GetStartedButton() {
+  const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
@@ -34,8 +36,10 @@ export default function GetStartedButton() {
       } = await supabase.auth.getSession();
 
       if (!session?.access_token) {
-        setCheckoutError("Please sign in before starting checkout.");
-        setIsRedirecting(false);
+        // Cold prospects have no account yet. Send them to sign up instead of
+        // dead-ending them at the buy moment. The signup flow redirects back
+        // to /pricing once the account exists, continuing them to checkout.
+        router.push("/signup");
         return;
       }
 

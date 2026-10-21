@@ -5,6 +5,14 @@ import Logo from "@/components/Logo";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How ProofClean collects, uses, and protects your data.",
+  alternates: { canonical: "/privacy" },
+  openGraph: {
+    title: "Privacy Policy — ProofClean",
+    description: "How ProofClean collects, uses, and protects your data.",
+    url: "/privacy",
+    siteName: "ProofClean",
+    type: "website",
+  },
 };
 
 export default function PrivacyPage() {

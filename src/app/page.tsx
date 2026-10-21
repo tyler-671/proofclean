@@ -1,6 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import HomeAuthRedirect from "@/components/HomeAuthRedirect";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Commercial Cleaning Software with Photo Proof — ProofClean",
+    description:
+      "Photo-proof job software for commercial cleaning companies. Dispatch crews, track jobs on a live map, and auto-send clients photo proof. Flat $59/mo, unlimited cleaners & locations.",
+    url: "/",
+    siteName: "ProofClean",
+    type: "website",
+  },
+};
 
 const valueProps = [
   {
