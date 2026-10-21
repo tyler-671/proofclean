@@ -1,18 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Logo from "@/components/Logo";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : null;
+import HomeAuthRedirect from "@/components/HomeAuthRedirect";
 
 const valueProps = [
   {
@@ -81,53 +69,9 @@ const faqs = [
 ];
 
 export default function LandingPage() {
-  const router = useRouter();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkAuth = async () => {
-      if (!supabase) {
-        if (isMounted) setIsCheckingAuth(false);
-        return;
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!isMounted) return;
-
-      if (session?.user) {
-        const { data: subscription } = await supabase
-          .from("subscriptions")
-          .select("status")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (subscription?.status === "active") {
-          router.replace("/dashboard");
-          return;
-        }
-      }
-
-      setIsCheckingAuth(false);
-    };
-
-    void checkAuth();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
-
-  if (isCheckingAuth) {
-    return <main className="min-h-screen bg-[#f7fafa]" />;
-  }
-
   return (
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
+      <HomeAuthRedirect />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
