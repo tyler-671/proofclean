@@ -1,15 +1,8 @@
-"use client";
-
-import { Suspense, useEffect, useState } from "react";
+import { Suspense } from "react";
 import Logo from "@/components/Logo";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+import PricingNav from "./PricingNav";
+import GetStartedButton from "./GetStartedButton";
+import CheckoutFinalizer from "./CheckoutFinalizer";
 
 const features = [
   "Unlimited locations",
@@ -20,139 +13,22 @@ const features = [
   "Email support",
 ];
 
-function PricingContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [isFinalizingCheckout, setIsFinalizingCheckout] = useState(false);
-
-  const onSignOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
-    router.replace("/");
-  };
-
-  const onGetStarted = async () => {
-    setCheckoutError(null);
-    setIsRedirecting(true);
-
-    try {
-      if (!supabase) {
-        setCheckoutError("Supabase environment variables are missing.");
-        setIsRedirecting(false);
-        return;
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        setCheckoutError("Please sign in before starting checkout.");
-        setIsRedirecting(false);
-        return;
-      }
-
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const result = (await response.json().catch(() => null)) as
-        | { url?: string; error?: string }
-        | null;
-
-      if (!response.ok || !result?.url) {
-        setCheckoutError(result?.error ?? "Could not start checkout. Please try again.");
-        setIsRedirecting(false);
-        return;
-      }
-
-      window.location.href = result.url;
-    } catch (error) {
-      setCheckoutError(
-        error instanceof Error ? error.message : "Unexpected error starting checkout.",
-      );
-      setIsRedirecting(false);
-    }
-  };
-
-  useEffect(() => {
-    const checkoutStatus = searchParams.get("checkout");
-    const sessionId = searchParams.get("session_id");
-
-    if (checkoutStatus !== "success" || !sessionId) {
-      return;
-    }
-
-    const finalizeCheckout = async () => {
-      if (!supabase) {
-        setCheckoutError("Supabase environment variables are missing.");
-        return;
-      }
-
-      setCheckoutError(null);
-      setIsFinalizingCheckout(true);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        setCheckoutError("Please sign in before finalizing checkout.");
-        setIsFinalizingCheckout(false);
-        return;
-      }
-
-      const response = await fetch("/api/checkout/success", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ sessionId }),
-      });
-
-      const result = (await response.json().catch(() => null)) as { error?: string } | null;
-
-      if (!response.ok) {
-        setCheckoutError(result?.error ?? "Could not finalize subscription checkout.");
-        setIsFinalizingCheckout(false);
-        return;
-      }
-
-      router.replace("/dashboard");
-    };
-
-    void finalizeCheckout();
-  }, [router, searchParams]);
-
-  const isBusy = isRedirecting || isFinalizingCheckout;
-
+export default function PricingPage() {
   return (
     <main className="min-h-screen bg-[#f7fafa] font-[family-name:var(--font-geist-sans)] text-slate-900">
       {/* Top nav */}
       <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Logo href="/" size="md" />
-        <button
-          type="button"
-          onClick={() => void onSignOut()}
-          className="rounded-lg px-4 py-2 text-sm font-medium text-slate-700 transition hover:text-slate-900"
-        >
-          Sign out
-        </button>
+        <PricingNav />
       </nav>
 
       {/* Page header */}
       <section className="mx-auto w-full max-w-xl px-4 pt-8 text-center sm:px-6 sm:pt-12">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-        You&apos;re one step away.
+          Simple, flat pricing.
         </h1>
         <p className="mt-3 text-sm text-slate-600 sm:text-base">
-          Subscribe to start dispatching tonight.
+          One plan. Unlimited cleaners and locations. No per-seat fees.
         </p>
       </section>
 
@@ -207,18 +83,7 @@ function PricingContent() {
 
           {/* CTA + Risk-free */}
           <div className="px-7 pb-7 pt-6">
-            <button
-              type="button"
-              onClick={() => void onGetStarted()}
-              disabled={isBusy}
-              className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isRedirecting
-                ? "Redirecting..."
-                : isFinalizingCheckout
-                  ? "Finalizing checkout..."
-                  : "Get started"}
-            </button>
+            <GetStartedButton />
 
             {/* Risk-free banner */}
             <div className="mt-4 rounded-lg bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-200">
@@ -228,22 +93,12 @@ function PricingContent() {
               </p>
             </div>
 
-            {checkoutError ? (
-              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                {checkoutError}
-              </p>
-            ) : null}
+            <Suspense fallback={null}>
+              <CheckoutFinalizer />
+            </Suspense>
           </div>
         </div>
       </section>
     </main>
-  );
-}
-
-export default function PricingPage() {
-  return (
-    <Suspense fallback={<main className="min-h-screen bg-[#f7fafa]" />}>
-      <PricingContent />
-    </Suspense>
   );
 }
